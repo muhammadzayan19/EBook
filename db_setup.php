@@ -1,8 +1,8 @@
 <?php
-$servername = "sql200.infinityfree.com";
-$username   = "if0_40222082";
-$password   = "Zayan2008Amir";
-$dbname     = "if0_40222082_ebook";
+$servername = "localhost";
+$username   = "root";
+$password   = "";
+$dbname     = "ebook";
 
 $conn = new mysqli($servername, $username, $password);
 if ($conn->connect_error) {
