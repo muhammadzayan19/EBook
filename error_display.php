@@ -1,0 +1,9 @@
+<?php
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
+echo "Error reporting is ON";
+
+// include your main file to test:
+include 'index.php';

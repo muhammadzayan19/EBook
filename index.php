@@ -1,6 +1,5 @@
 <?php
 $page_title = "Home";
-=
 include 'includes/header.php';
 ?>
 
