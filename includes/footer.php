@@ -1,5 +1,4 @@
 <?php
-// Determine the base path for footer links
 $current_page = basename($_SERVER['PHP_SELF']);
 $in_subdirectory = in_array($current_page, ['login.php', 'register.php', 'books.php', 'book_details.php', 'order.php', 'competition.php', 'upload_essay.php', 'profile.php', 'my_orders.php', 'my_submissions.php']) ? '../' : '';
 ?>
@@ -70,12 +69,9 @@ $in_subdirectory = in_array($current_page, ['login.php', 'register.php', 'books.
         </div>
     </footer>
 
-    <!-- Bootstrap 5 JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
-    <!-- Custom JavaScript -->
     <script>
-        // Smooth scrolling for anchor links
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {
             anchor.addEventListener('click', function (e) {
                 e.preventDefault();
@@ -89,7 +85,6 @@ $in_subdirectory = in_array($current_page, ['login.php', 'register.php', 'books.
             });
         });
 
-        // Auto-hide alerts after 5 seconds
         const alerts = document.querySelectorAll('.alert');
         alerts.forEach(alert => {
             setTimeout(() => {
@@ -98,7 +93,6 @@ $in_subdirectory = in_array($current_page, ['login.php', 'register.php', 'books.
             }, 5000);
         });
 
-        // Form validation helper
         const forms = document.querySelectorAll('.needs-validation');
         Array.from(forms).forEach(form => {
             form.addEventListener('submit', event => {

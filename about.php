@@ -1,8 +1,6 @@
 <?php
-// Set page title for header
 $page_title = "About Us";
 
-// Include header
 include 'includes/header.php';
 ?>
 
@@ -260,7 +258,6 @@ include 'includes/header.php';
 
     <!-- Counter Animation Script -->
     <script>
-        // Animated counter for stats
         function animateCounter(element) {
             const target = parseInt(element.getAttribute('data-count'));
             const duration = 2000;
@@ -278,7 +275,6 @@ include 'includes/header.php';
             }, 16);
         }
 
-        // Intersection Observer for counter animation
         const observerOptions = {
             threshold: 0.5,
             rootMargin: '0px'
@@ -305,6 +301,5 @@ include 'includes/header.php';
     </script>
 
 <?php
-// Include footer
 include 'includes/footer.php';
 ?>

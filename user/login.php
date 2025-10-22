@@ -1,52 +1,40 @@
 <?php
-// Start session
 session_start();
 
-// If user is already logged in, redirect to dashboard
 if (isset($_SESSION['user_id'])) {
     header('Location: profile.php');
     exit();
 }
 
-// Database connection
 require_once '../config/db.php';
 
-// Set page title for header
 $page_title = "Login";
 
-// Include header
 include '../includes/header.php';
 
-// Initialize variables
 $error_message = '';
 $success_message = '';
 
-// Check if there's a registration success message
 if (isset($_SESSION['registration_success'])) {
     $success_message = $_SESSION['registration_success'];
     unset($_SESSION['registration_success']);
 }
 
-// Check if there's a logout message
 if (isset($_SESSION['logout_message'])) {
     $success_message = $_SESSION['logout_message'];
     unset($_SESSION['logout_message']);
 }
 
-// Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Sanitize input
     $email = sanitize_input($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
     $remember = isset($_POST['remember']);
     
-    // Basic validation
     if (empty($email) || empty($password)) {
         $error_message = 'Please enter both email and password.';
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $error_message = 'Please enter a valid email address.';
     } else {
-        // Check credentials using prepared statement
         $stmt = $conn->prepare("SELECT user_id, full_name, email, password FROM users WHERE email = ?");
         $stmt->bind_param("s", $email);
         $stmt->execute();
@@ -55,32 +43,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($result->num_rows === 1) {
             $user = $result->fetch_assoc();
             
-            // Verify password
             if (password_verify($password, $user['password'])) {
-                // Password is correct, start session
                 $_SESSION['user_id'] = $user['user_id'];
                 $_SESSION['user_name'] = $user['full_name'];
                 $_SESSION['user_email'] = $user['email'];
                 $_SESSION['login_time'] = time();
                 
-                // Handle remember me functionality
                 if ($remember) {
-                    // Set cookie for 30 days
                     setcookie('remember_user', $email, time() + (86400 * 30), "/");
                 } else {
-                    // Remove cookie if exists
                     if (isset($_COOKIE['remember_user'])) {
                         setcookie('remember_user', '', time() - 3600, "/");
                     }
                 }
                 
-                // Update last login time
                 $update_stmt = $conn->prepare("UPDATE users SET registered_at = registered_at WHERE user_id = ?");
                 $update_stmt->bind_param("i", $user['user_id']);
                 $update_stmt->execute();
                 $update_stmt->close();
                 
-                // Redirect to profile
                 header('Location: profile.php');
                 exit();
             } else {
@@ -94,7 +75,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Check for remember me cookie
 $remembered_email = $_COOKIE['remember_user'] ?? '';
 ?>
 
@@ -201,7 +181,6 @@ $remembered_email = $_COOKIE['remember_user'] ?? '';
             passwordField.type = checkbox.checked ? 'text' : 'password';
         }
 
-        // Form validation
         (function () {
             'use strict'
             var forms = document.querySelectorAll('.needs-validation')
@@ -218,6 +197,5 @@ $remembered_email = $_COOKIE['remember_user'] ?? '';
     </script>
 
 <?php
-// Include footer
 include '../includes/footer.php';
 ?>

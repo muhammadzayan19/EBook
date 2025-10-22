@@ -1,22 +1,21 @@
 <?php
-// Start session if not already started
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Get current page name for active state
 $current_page = basename($_SERVER['PHP_SELF']);
 
-// Function to check if current page matches
 function isActive($page) {
     global $current_page;
     return ($current_page === $page) ? 'active' : '';
 }
 
-// Determine the base path for navigation links
-// This handles being in root, user/, or admin/ directories
 $path_parts = explode('/', trim($_SERVER['REQUEST_URI'], '/'));
-$in_subdirectory = in_array($current_page, ['login.php', 'register.php', 'books.php', 'book_details.php', 'order.php', 'competition.php', 'upload_essay.php', 'profile.php']) ? '../' : '';
+$in_subdirectory = (in_array($current_page, [
+    'login.php', 'register.php', 'books.php', 
+    'book_details.php', 'order.php', 'competition.php',
+    'upload_essay.php', 'profile.php'
+]) || strpos($_SERVER['REQUEST_URI'], '/admin/') !== false) ? '../' : '';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -28,14 +27,12 @@ $in_subdirectory = in_array($current_page, ['login.php', 'register.php', 'books.
     <meta name="author" content="Zayan - Prime Creators">
     <title><?php echo isset($page_title) ? $page_title . ' | ' : ''; ?>Online E-Book System</title>
     
-    <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     
-    <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     
-    <!-- Custom CSS -->
     <link rel="stylesheet" href="<?php echo $in_subdirectory; ?>assets/css/style.css">
+    <link rel="stylesheet" href="<?php echo $in_subdirectory; ?>assets/css/admin.css">
 </head>
 <body>
     
@@ -67,7 +64,6 @@ $in_subdirectory = in_array($current_page, ['login.php', 'register.php', 'books.
                     </li>
                     
                     <?php if(isset($_SESSION['user_id'])): ?>
-                        <!-- Logged In User Menu -->
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle <?php echo isActive('profile.php'); ?>" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 <i class="bi bi-person-circle"></i> 
@@ -82,7 +78,6 @@ $in_subdirectory = in_array($current_page, ['login.php', 'register.php', 'books.
                             </ul>
                         </li>
                     <?php else: ?>
-                        <!-- Guest User Menu -->
                         <li class="nav-item">
                             <a class="nav-link btn-login <?php echo isActive('login.php'); ?>" href="<?php echo $in_subdirectory; ?>user/login.php">Login</a>
                         </li>

@@ -1,8 +1,6 @@
 <?php
-// Set page title for header
 $page_title = "Home";
-
-// Include header
+=
 include 'includes/header.php';
 ?>
 
@@ -81,8 +79,7 @@ include 'includes/header.php';
                 <div class="col-lg-4 col-md-6 mb-4">
                     <div class="book-card">
                         <div class="book-image">
-                            <img src="assets/images/books/book1.jpg" alt="Advanced PHP Programming" class="img-fluid"
-                                 onerror="this.src='https://via.placeholder.com/300x400/004aad/ffffff?text=Advanced+PHP'">
+                            <img src="assets/images/books/book1.jpg" alt="Advanced PHP Programming" class="img-fluid">
                             <div class="book-badge">Bestseller</div>
                         </div>
                         <div class="book-content">
@@ -104,8 +101,7 @@ include 'includes/header.php';
                 <div class="col-lg-4 col-md-6 mb-4">
                     <div class="book-card">
                         <div class="book-image">
-                            <img src="assets/images/books/book2.jpg" alt="Database Design Fundamentals" class="img-fluid"
-                                 onerror="this.src='https://via.placeholder.com/300x400/007bff/ffffff?text=Database+Design'">
+                            <img src="assets/images/books/book2.jpg" alt="Database Design Fundamentals" class="img-fluid">
                             <div class="book-badge badge-new">New Release</div>
                         </div>
                         <div class="book-content">
@@ -127,8 +123,7 @@ include 'includes/header.php';
                 <div class="col-lg-4 col-md-6 mb-4">
                     <div class="book-card">
                         <div class="book-image">
-                            <img src="assets/images/books/book3.jpg" alt="Web Development Complete Guide" class="img-fluid"
-                                 onerror="this.src='https://via.placeholder.com/300x400/ffc107/333333?text=Web+Development'">
+                            <img src="assets/images/books/book3.jpg" alt="Web Development Complete Guide" class="img-fluid">
                             <div class="book-badge badge-featured">Featured</div>
                         </div>
                         <div class="book-content">
@@ -233,6 +228,5 @@ include 'includes/header.php';
     </section>
 
 <?php
-// Include footer
 include 'includes/footer.php';
 ?>

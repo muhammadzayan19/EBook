@@ -1,22 +1,13 @@
 <?php
-/**
- * User Profile Dashboard
- * Protected page - requires authentication
- */
-
-// Start session
 session_start();
 
-// Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
     exit();
 }
 
-// Database connection
 require_once '../config/db.php';
 
-// Get user information
 $user_id = $_SESSION['user_id'];
 $stmt = $conn->prepare("SELECT user_id, full_name, email, phone, address, registered_at FROM users WHERE user_id = ?");
 $stmt->bind_param("i", $user_id);
@@ -25,7 +16,6 @@ $result = $stmt->get_result();
 $user = $result->fetch_assoc();
 $stmt->close();
 
-// Get user's order count
 $order_stmt = $conn->prepare("SELECT COUNT(*) as order_count FROM orders WHERE user_id = ?");
 $order_stmt->bind_param("i", $user_id);
 $order_stmt->execute();
@@ -34,10 +24,8 @@ $order_data = $order_result->fetch_assoc();
 $order_count = $order_data['order_count'];
 $order_stmt->close();
 
-// Set page title
 $page_title = "My Profile";
 
-// Include header
 include '../includes/header.php';
 ?>
 
@@ -247,6 +235,5 @@ include '../includes/header.php';
 </section>
 
 <?php
-// Include footer
 include '../includes/footer.php';
 ?>

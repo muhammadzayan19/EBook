@@ -1,33 +1,25 @@
 <?php
-// Set page title for header
 $page_title = "Contact Us";
 
-// Include header
 include 'includes/header.php';
 
-// Handle form submission
 $success_message = '';
 $error_message = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Sanitize and validate input
     $name = trim($_POST['name'] ?? '');
     $email = trim($_POST['email'] ?? '');
     $phone = trim($_POST['phone'] ?? '');
     $subject = trim($_POST['subject'] ?? '');
     $message = trim($_POST['message'] ?? '');
     
-    // Basic validation
     if (empty($name) || empty($email) || empty($subject) || empty($message)) {
         $error_message = 'Please fill in all required fields.';
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $error_message = 'Please enter a valid email address.';
     } else {
-        // Here you would typically save to database or send email
-        // For now, we'll just show a success message
         $success_message = 'Thank you for contacting us! We will get back to you within 24 hours.';
         
-        // Clear form data after successful submission
         $name = $email = $phone = $subject = $message = '';
     }
 }
@@ -380,6 +372,5 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </section>
 
 <?php
-// Include footer
 include 'includes/footer.php';
 ?>

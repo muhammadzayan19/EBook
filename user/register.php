@@ -1,30 +1,22 @@
 <?php
-// Start session
 session_start();
 
-// If user is already logged in, redirect to dashboard
 if (isset($_SESSION['user_id'])) {
     header('Location: profile.php');
     exit();
 }
 
-// Set page title for header
 $page_title = "Register";
 
-// Include header
 include '../includes/header.php';
 
-// Database connection
 require_once '../config/db.php';
 
-// Initialize variables
 $error_message = '';
 $success_message = '';
 $form_data = [];
 
-// Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Sanitize and collect input
     $full_name = trim($_POST['full_name'] ?? '');
     $email = trim($_POST['email'] ?? '');
     $phone = trim($_POST['phone'] ?? '');
@@ -33,7 +25,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $confirm_password = $_POST['confirm_password'] ?? '';
     $terms = isset($_POST['terms']);
     
-    // Store form data for repopulation on error
     $form_data = [
         'full_name' => $full_name,
         'email' => $email,
@@ -41,7 +32,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'address' => $address
     ];
     
-    // Validation
     if (empty($full_name) || empty($email) || empty($password) || empty($confirm_password)) {
         $error_message = 'Please fill in all required fields.';
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -53,7 +43,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (!$terms) {
         $error_message = 'Please accept the terms and conditions.';
     } else {
-        // Check if email already exists
         $check_email = $conn->prepare("SELECT email FROM users WHERE email = ?");
         $check_email->bind_param("s", $email);
         $check_email->execute();
@@ -62,15 +51,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($result->num_rows > 0) {
             $error_message = 'Email address already registered. Please use a different email or <a href="login.php">login</a>.';
         } else {
-            // Hash password
             $hashed_password = password_hash($password, PASSWORD_BCRYPT);
             
-            // Insert new user
             $stmt = $conn->prepare("INSERT INTO users (full_name, email, password, phone, address) VALUES (?, ?, ?, ?, ?)");
             $stmt->bind_param("sssss", $full_name, $email, $hashed_password, $phone, $address);
             
             if ($stmt->execute()) {
-                // Set success message in session and redirect to login
                 $_SESSION['registration_success'] = 'Registration successful! Please login with your credentials.';
                 header('Location: login.php');
                 exit();
@@ -239,7 +225,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <!-- Password Toggle and Strength Script -->
     <script>
-        // Toggle password visibility
         function togglePasswords() {
             const password = document.getElementById('password');
             const confirmPassword = document.getElementById('confirm_password');
@@ -250,7 +235,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             confirmPassword.type = type;
         }
 
-        // Password strength indicator
         document.getElementById('password').addEventListener('input', function() {
             const password = this.value;
             const strengthDiv = document.getElementById('passwordStrength');
@@ -284,7 +268,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             strengthDiv.innerHTML = `<small>Password Strength: <span class="strength-${colorClass}">${feedback}</span></small>`;
         });
 
-        // Confirm password matching
         document.getElementById('confirm_password').addEventListener('input', function() {
             const password = document.getElementById('password').value;
             const confirmPassword = this.value;
@@ -298,6 +281,5 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </script>
 
 <?php
-// Include footer
 include '../includes/footer.php';
 ?>

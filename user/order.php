@@ -1,23 +1,14 @@
 <?php
-/**
- * Order Placement Page
- * Allows users to place orders for books
- */
-
-// Start session
 session_start();
 
-// Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
     $_SESSION['redirect_after_login'] = $_SERVER['REQUEST_URI'];
     header('Location: login.php');
     exit();
 }
 
-// Database connection
 require_once '../config/db.php';
 
-// Get book ID from URL
 $book_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
 if ($book_id === 0) {
@@ -25,7 +16,6 @@ if ($book_id === 0) {
     exit();
 }
 
-// Get book details
 $stmt = $conn->prepare("SELECT * FROM books WHERE book_id = ?");
 $stmt->bind_param("i", $book_id);
 $stmt->execute();
@@ -38,7 +28,6 @@ if (!$book) {
     exit();
 }
 
-// Get user details
 $user_id = $_SESSION['user_id'];
 $user_stmt = $conn->prepare("SELECT * FROM users WHERE user_id = ?");
 $user_stmt->bind_param("i", $user_id);
@@ -47,24 +36,19 @@ $user_result = $user_stmt->get_result();
 $user = $user_result->fetch_assoc();
 $user_stmt->close();
 
-// Set page title
 $page_title = "Place Order";
 
-// Include header
 include '../includes/header.php';
 
-// Initialize variables
 $error_message = '';
 $success_message = '';
 
-// Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $quantity = intval($_POST['quantity'] ?? 1);
     $order_type = $_POST['order_type'] ?? $book['type'];
     $payment_method = $_POST['payment_method'] ?? '';
     $shipping_address = trim($_POST['shipping_address'] ?? $user['address']);
     
-    // Validation
     if ($quantity < 1) {
         $error_message = 'Please enter a valid quantity.';
     } elseif ($quantity > $book['stock']) {
@@ -74,18 +58,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (in_array($order_type, ['cd', 'hardcopy']) && empty($shipping_address)) {
         $error_message = 'Shipping address is required for physical items.';
     } else {
-        // Calculate total amount
         $unit_price = $book['is_free'] ? 0 : $book['price'];
         $total_amount = $unit_price * $quantity;
         
-        // Add shipping for physical items
         $shipping_cost = 0;
         if (in_array($order_type, ['cd', 'hardcopy'])) {
-            $shipping_cost = 5.99 * $quantity; // Basic shipping calculation
+            $shipping_cost = 5.99 * $quantity;
             $total_amount += $shipping_cost;
         }
         
-        // Insert order
         $order_stmt = $conn->prepare("INSERT INTO orders (user_id, book_id, quantity, order_type, total_amount, status, order_date) VALUES (?, ?, ?, ?, ?, 'pending', NOW())");
         $order_stmt->bind_param("iiisd", $user_id, $book_id, $quantity, $order_type, $total_amount);
         
@@ -93,14 +74,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $order_id = $order_stmt->insert_id;
             $order_stmt->close();
             
-            // Insert payment record
             $payment_status = $book['is_free'] ? 'completed' : 'pending';
             $payment_stmt = $conn->prepare("INSERT INTO payments (order_id, payment_method, amount, payment_status, payment_date) VALUES (?, ?, ?, ?, NOW())");
             $payment_stmt->bind_param("isds", $order_id, $payment_method, $total_amount, $payment_status);
             $payment_stmt->execute();
             $payment_stmt->close();
             
-            // Update book stock
             $update_stock = $conn->prepare("UPDATE books SET stock = stock - ? WHERE book_id = ?");
             $update_stock->bind_param("ii", $quantity, $book_id);
             $update_stock->execute();
@@ -108,7 +87,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             $success_message = 'Order placed successfully! Order ID: #' . $order_id;
             
-            // Refresh book data
             $stmt = $conn->prepare("SELECT * FROM books WHERE book_id = ?");
             $stmt->bind_param("i", $book_id);
             $stmt->execute();
@@ -181,8 +159,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <div class="col-md-3">
                                     <img src="../assets/images/books/default.jpg" 
                                          alt="<?php echo htmlspecialchars($book['title']); ?>" 
-                                         class="img-fluid rounded"
-                                         onerror="this.src='https://via.placeholder.com/200x280/2563eb/ffffff?text=Book'">
+                                         class="img-fluid rounded">
                                 </div>
                                 <div class="col-md-9">
                                     <span class="book-category-badge"><?php echo htmlspecialchars($book['category']); ?></span>
@@ -424,7 +401,6 @@ document.querySelectorAll('input[name="order_type"]').forEach(radio => {
     radio.addEventListener('change', updateSummary);
 });
 
-// Form validation
 (function () {
     'use strict'
     var forms = document.querySelectorAll('.needs-validation')
@@ -441,6 +417,5 @@ document.querySelectorAll('input[name="order_type"]').forEach(radio => {
 </script>
 
 <?php
-// Include footer
 include '../includes/footer.php';
 ?>

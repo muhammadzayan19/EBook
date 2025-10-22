@@ -1,29 +1,17 @@
 <?php
-/**
- * Competitions Page
- * Display available competitions and allow users to participate
- */
-
-// Start session
 session_start();
 
-// Database connection
 require_once '../config/db.php';
 
-// Set page title
 $page_title = "Writing Competitions";
 
-// Include header
 include '../includes/header.php';
 
-// Get user login status
 $is_logged_in = isset($_SESSION['user_id']);
 $user_id = $is_logged_in ? $_SESSION['user_id'] : null;
 
-// Get competition ID if specified
 $comp_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
-// Fetch competitions
 if ($comp_id > 0) {
     $stmt = $conn->prepare("SELECT * FROM competitions WHERE comp_id = ? AND status = 'active'");
     $stmt->bind_param("i", $comp_id);
@@ -32,7 +20,6 @@ if ($comp_id > 0) {
     $single_competition = $result->fetch_assoc();
     $stmt->close();
     
-    // Check if user already submitted
     $has_submitted = false;
     if ($is_logged_in && $single_competition) {
         $check_stmt = $conn->prepare("SELECT submission_id FROM submissions WHERE comp_id = ? AND user_id = ?");
@@ -46,7 +33,6 @@ if ($comp_id > 0) {
     $result = $conn->query("SELECT * FROM competitions WHERE status = 'active' ORDER BY start_date DESC");
 }
 
-// Get recent winners
 $winners_result = $conn->query("
     SELECT w.*, c.title as comp_title, u.full_name 
     FROM winners w 
@@ -214,7 +200,6 @@ $winners_result = $conn->query("
 </section>
 
 <script>
-// Countdown timer
 const endDate = new Date('<?php echo $single_competition['end_date']; ?>').getTime();
 
 function updateCountdown() {
@@ -408,6 +393,5 @@ setInterval(updateCountdown, 60000);
 <?php endif; ?>
 
 <?php
-// Include footer
 include '../includes/footer.php';
 ?>

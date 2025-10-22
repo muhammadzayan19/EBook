@@ -1,22 +1,14 @@
 <?php
-/**
- * Online E-Book System – Database Auto Setup
- * -------------------------------------------
- * This script creates the MySQL database and all required tables automatically.
- */
+$servername = "sql200.infinityfree.com";
+$username   = "if0_40222082";
+$password   = "Zayan2008Amir";
+$dbname     = "if0_40222082_ebook";
 
-$servername = "localhost";
-$username   = "root";
-$password   = "";
-$dbname     = "ebook";
-
-// 1️⃣ Create connection (without DB first)
 $conn = new mysqli($servername, $username, $password);
 if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
-// 2️⃣ Create database if not exists
 $sql = "CREATE DATABASE IF NOT EXISTS $dbname CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci";
 if ($conn->query($sql) === TRUE) {
     echo "✅ Database '$dbname' created or already exists.<br>";
@@ -26,7 +18,6 @@ if ($conn->query($sql) === TRUE) {
 
 $conn->select_db($dbname);
 
-// 3️⃣ Create all tables
 $tables = [
 
 "CREATE TABLE IF NOT EXISTS users (
@@ -116,7 +107,6 @@ $tables = [
 ) ENGINE=InnoDB;"
 ];
 
-// 4️⃣ Run all table queries
 foreach ($tables as $query) {
     if ($conn->query($query) === TRUE) {
         echo "✅ Table created successfully.<br>";
@@ -125,7 +115,6 @@ foreach ($tables as $query) {
     }
 }
 
-// 5️⃣ Optional: create default admin
 $admin_check = $conn->query("SELECT * FROM admins WHERE username='admin'");
 if ($admin_check->num_rows == 0) {
     $hashed = password_hash('admin123', PASSWORD_BCRYPT);

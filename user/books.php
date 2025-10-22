@@ -1,27 +1,16 @@
 <?php
-/**
- * Books Listing Page
- * Displays all available books with filtering and search
- */
-
-// Start session
 session_start();
 
-// Database connection
 require_once '../config/db.php';
 
-// Set page title
 $page_title = "Browse Books";
 
-// Include header
 include '../includes/header.php';
 
-// Get filter parameters
 $category = $_GET['category'] ?? '';
 $search = $_GET['search'] ?? '';
 $type = $_GET['type'] ?? '';
 
-// Build query
 $query = "SELECT * FROM books WHERE 1=1";
 $params = [];
 $types = "";
@@ -49,7 +38,6 @@ if (!empty($type)) {
 
 $query .= " ORDER BY created_at DESC";
 
-// Execute query
 if (!empty($params)) {
     $stmt = $conn->prepare($query);
     $stmt->bind_param($types, ...$params);
@@ -59,7 +47,6 @@ if (!empty($params)) {
     $result = $conn->query($query);
 }
 
-// Get categories for filter
 $categories_result = $conn->query("SELECT DISTINCT category FROM books ORDER BY category");
 ?>
 
@@ -174,8 +161,7 @@ $categories_result = $conn->query("SELECT DISTINCT category FROM books ORDER BY 
                             <div class="book-image">
                                 <img src="../assets/images/books/default.jpg" 
                                      alt="<?php echo htmlspecialchars($book['title']); ?>" 
-                                     class="img-fluid"
-                                     onerror="this.src='https://via.placeholder.com/300x400/2563eb/ffffff?text=<?php echo urlencode($book['title']); ?>'">
+                                     class="img-fluid">
                                 
                                 <?php if ($book['is_free']): ?>
                                 <div class="book-badge badge-free">Free</div>
@@ -244,6 +230,5 @@ $categories_result = $conn->query("SELECT DISTINCT category FROM books ORDER BY 
 </section>
 
 <?php
-// Include footer
 include '../includes/footer.php';
 ?>
