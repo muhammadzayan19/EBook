@@ -14,7 +14,7 @@ $path_parts = explode('/', trim($_SERVER['REQUEST_URI'], '/'));
 $in_subdirectory = (in_array($current_page, [
     'login.php', 'register.php', 'books.php', 
     'book_details.php', 'order.php', 'competition.php',
-    'upload_essay.php', 'profile.php'
+    'upload_essay.php', 'profile.php', 'manage_books', "manage_competitions"
 ]) || strpos($_SERVER['REQUEST_URI'], '/admin/') !== false) ? '../' : '';
 ?>
 <!DOCTYPE html>

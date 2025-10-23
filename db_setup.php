@@ -82,7 +82,8 @@ $tables = [
     start_date DATETIME,
     end_date DATETIME,
     prize VARCHAR(255),
-    status ENUM('upcoming','ongoing','completed') DEFAULT 'upcoming'
+    status ENUM('active','upcoming','closed','completed') DEFAULT 'upcoming'
+    description TEXT
 ) ENGINE=InnoDB;",
 
 "CREATE TABLE IF NOT EXISTS submissions (
@@ -104,7 +105,34 @@ $tables = [
     announced_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (comp_id) REFERENCES competitions(comp_id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
-) ENGINE=InnoDB;"
+) ENGINE=InnoDB;",
+
+"CREATE TABLE IF NOT EXISTS settings (
+    setting_id INT AUTO_INCREMENT PRIMARY KEY,
+    setting_key VARCHAR(100) UNIQUE NOT NULL,
+    setting_value TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB;",
+
+"INSERT INTO settings (setting_key, setting_value) VALUES
+('site_name', 'Online E-Book System'),
+('site_email', 'info@ebookstore.com'),
+('site_phone', '+1 234 567 8900'),
+('site_address', '123 Book Street, City, Country'),
+('site_description', 'Welcome to our online e-book store. We offer a wide selection of books across various categories.'),
+('smtp_host', 'smtp.gmail.com'),
+('smtp_port', '587'),
+('smtp_username', 'noreply@ebookstore.com'),
+('smtp_password', ''),
+('email_notifications', '1'),
+('email_users', '1'),
+('payment_mode', 'test'),
+('payment_gateway', 'stripe'),
+('stripe_publishable', ''),
+('stripe_secret', ''),
+('auto_approve', '1')
+ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value);"
 ];
 
 foreach ($tables as $query) {

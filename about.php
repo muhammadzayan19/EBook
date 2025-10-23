@@ -28,7 +28,7 @@ include 'includes/header.php';
             <div class="row align-items-center">
                 <div class="col-lg-6 mb-4 mb-lg-0">
                     <div class="about-image-wrapper">
-                        <img src="assets/images/about-mission.jpg" alt="Our Mission" class="img-fluid rounded-3">
+                        <img src="assets/images/about-mission.webp" alt="Our Mission" class="img-fluid rounded-3">
                         <div class="image-badge">
                             <i class="bi bi-rocket-takeoff"></i>
                             <span>Our Mission</span>
@@ -219,7 +219,7 @@ include 'includes/header.php';
                 <div class="col-lg-3 col-md-6 mb-4">
                     <div class="team-card">
                         <div class="team-image">
-                            <img src="assets/images/team/member2.jpg" alt="Team Member">
+                            <img src="assets/images/team/member2.webp" alt="Team Member">
                             <div class="team-social">
                                 <a href="https://www.linkedin.com/in/aayan-aness-b1a14231b/"><i class="bi bi-linkedin"></i></a>
                                 <a href="https://github.com/aayana91/"><i class="bi bi-github"></i></a>

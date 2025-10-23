@@ -13,7 +13,7 @@ $user_id = $is_logged_in ? $_SESSION['user_id'] : null;
 $comp_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
 if ($comp_id > 0) {
-    $stmt = $conn->prepare("SELECT * FROM competitions WHERE comp_id = ? AND status = 'active'");
+    $stmt = $conn->prepare("SELECT * FROM competitions WHERE comp_id = ? AND LOWER(status) = 'active'");
     $stmt->bind_param("i", $comp_id);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -30,7 +30,7 @@ if ($comp_id > 0) {
         $check_stmt->close();
     }
 } else {
-    $result = $conn->query("SELECT * FROM competitions WHERE status = 'active' ORDER BY start_date DESC");
+    $result = $conn->query("SELECT * FROM competitions WHERE LOWER(status) = 'active' ORDER BY start_date DESC");
 }
 
 $winners_result = $conn->query("

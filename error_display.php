@@ -5,5 +5,4 @@ error_reporting(E_ALL);
 
 echo "Error reporting is ON";
 
-// include your main file to test:
 include 'index.php';

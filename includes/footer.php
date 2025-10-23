@@ -63,7 +63,7 @@ $in_subdirectory = in_array($current_page, ['login.php', 'register.php', 'books.
             <div class="container">
                 <p>
                     &copy; <?php echo date('Y'); ?> Online E-Book System. All Rights Reserved. | 
-                    Developed by <span class="fw-bold">Zayan</span> | <span class="text-primary">Prime Creators</span>
+                    Developed by <span class="fw-bold">Zayan</span> | <span class="text-primary"><a class="text-primary" href="https://primecreators.co">Prime Creators</a></span>
                 </p>
             </div>
         </div>

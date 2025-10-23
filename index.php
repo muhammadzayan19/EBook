@@ -20,7 +20,7 @@ include 'includes/header.php';
                     </div>
                 </div>
                 <div class="col-lg-6 text-center">
-                    <img src="assets/images/hero-books.png" alt="E-Books Collection" class="img-fluid hero-image">
+                    <img src="assets/images/hero-books.webp" alt="E-Books Collection" class="img-fluid hero-image">
                 </div>
             </div>
         </div>
@@ -31,7 +31,7 @@ include 'includes/header.php';
         <div class="container">
             <div class="row align-items-center">
                 <div class="col-lg-6 mb-4 mb-lg-0">
-                    <img src="assets/images/about-illustration.jpg" alt="About Our Platform" class="img-fluid rounded shadow">
+                    <img src="assets/images/about-illustration.webp" alt="About Our Platform" class="img-fluid rounded shadow">
                 </div>
                 <div class="col-lg-6">
                     <h2 class="section-title mb-4">About Our Platform</h2>
@@ -78,7 +78,7 @@ include 'includes/header.php';
                 <div class="col-lg-4 col-md-6 mb-4">
                     <div class="book-card">
                         <div class="book-image">
-                            <img src="assets/images/books/book1.jpg" alt="Advanced PHP Programming" class="img-fluid">
+                            <img src="assets/images/books/book1.webp" alt="Advanced PHP Programming" class="img-fluid">
                             <div class="book-badge">Bestseller</div>
                         </div>
                         <div class="book-content">
@@ -100,7 +100,7 @@ include 'includes/header.php';
                 <div class="col-lg-4 col-md-6 mb-4">
                     <div class="book-card">
                         <div class="book-image">
-                            <img src="assets/images/books/book2.jpg" alt="Database Design Fundamentals" class="img-fluid">
+                            <img src="assets/images/books/book2.webp" alt="Database Design Fundamentals" class="img-fluid">
                             <div class="book-badge badge-new">New Release</div>
                         </div>
                         <div class="book-content">
@@ -122,7 +122,7 @@ include 'includes/header.php';
                 <div class="col-lg-4 col-md-6 mb-4">
                     <div class="book-card">
                         <div class="book-image">
-                            <img src="assets/images/books/book3.jpg" alt="Web Development Complete Guide" class="img-fluid">
+                            <img src="assets/images/books/book3.webp" alt="Web Development Complete Guide" class="img-fluid">
                             <div class="book-badge badge-featured">Featured</div>
                         </div>
                         <div class="book-content">
