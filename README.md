@@ -63,90 +63,161 @@ A full-stack PHP + MySQL web application that allows publishers to sell and dist
 ---
 
 ## 🗂 Folder Structure
+
+```text
 EBOOK/
 │
 ├── config/
-│ └── db.php # Database connection
+│   └── db.php                # Database connection
 │
 ├── includes/
-│ ├── header.php # Navigation / layout header
-│ ├── footer.php # Footer template
-│ └── functions.php # Common helper functions
+│   ├── header.php            # Navigation / layout header
+│   ├── footer.php            # Footer template
+│   └── functions.php         # Common helper functions
 │
 ├── admin/
-│ ├── login.php # Admin login page
-│ ├── index.php # Admin dashboard
-│ ├── manage_books.php # CRUD for books
-│ ├── manage_users.php # View/edit users
-│ ├── manage_orders.php # Manage orders & payments
-│ ├── manage_competitions.php # Add/edit competitions
-│ ├── winners.php # Declare & view winners
-│ └── logout.php
+│   ├── login.php             # Admin login page
+│   ├── index.php             # Admin dashboard
+│   ├── manage_books.php      # CRUD for books
+│   ├── manage_users.php      # View/edit users
+│   ├── manage_orders.php     # Manage orders & payments
+│   ├── manage_competitions.php # Add/edit competitions
+│   ├── winners.php           # Declare & view winners
+│   └── logout.php
 │
 ├── user/
-│ ├── register.php # User registration
-│ ├── login.php # User login
-│ ├── profile.php # Profile dashboard
-│ ├── books.php # Browse all books
-│ ├── book_details.php # Single book info
-│ ├── order.php # Order placement
-│ ├── competition.php # Competition landing
-│ ├── upload_essay.php # Essay upload page
-│ └── logout.php
+│   ├── register.php          # User registration
+│   ├── login.php             # User login
+│   ├── profile.php           # Profile dashboard
+│   ├── books.php             # Browse all books
+│   ├── book_details.php      # Single book info
+│   ├── order.php             # Order placement
+│   ├── competition.php       # Competition landing
+│   ├── upload_essay.php      # Essay upload page
+│   └── logout.php
 │
 ├── uploads/
-│ ├── books/ # Uploaded PDF files
-│ └── essays/ # Uploaded user essays
+│   ├── books/                # Uploaded PDF files
+│   └── essays/               # Uploaded user essays
 │
 ├── assets/
-│ ├── css/
-│ ├── js/
-│ └── images/
+│   ├── css/
+│   ├── js/
+│   └── images/
 │
-├── setup_database.php # Auto-creates DB & tables
-├── index.php # Home page
-├── about.php # About the publisher
-├── contact.php # Contact information
+├── setup_database.php        # Auto-creates DB & tables
+├── index.php                 # Home page
+├── about.php                 # About the publisher
+├── contact.php               # Contact information
 └── README.md
-
 
 ---
 
 ## 🧠 Database Schema
-
 ### 1️⃣ `users`
 | Field | Type | Key | Description |
 |-------|------|-----|-------------|
 | user_id | INT | PK | Unique ID |
-| full_name | VARCHAR(100) | | |
+| full_name | VARCHAR(100) |  | User’s full name |
 | email | VARCHAR(100) | UNIQUE | Login email |
-| password | VARCHAR(255) | | Hashed password |
-| address | TEXT | | Delivery address |
-| phone | VARCHAR(15) | | |
-| registered_at | DATETIME | | Timestamp |
+| password | VARCHAR(255) |  | Hashed password |
+| address | TEXT |  | Delivery address |
+| phone | VARCHAR(15) |  | Contact number |
+| registered_at | DATETIME |  | Timestamp of registration |
+
+---
 
 ### 2️⃣ `admins`
-| admin_id | username | password |
+| Field | Type | Key | Description |
+|-------|------|-----|-------------|
+| admin_id | INT | PK | Unique admin ID |
+| username | VARCHAR(100) | UNIQUE | Admin username |
+| password | VARCHAR(255) |  | Hashed password |
+
+---
 
 ### 3️⃣ `books`
-| book_id | title | author | category | description | price | subscription_price | type (pdf/cd/hardcopy) | file_path | stock | is_free | created_at |
+| Field | Type | Key | Description |
+|-------|------|-----|-------------|
+| book_id | INT | PK | Unique ID |
+| title | VARCHAR(255) |  | Book title |
+| author | VARCHAR(255) |  | Book author |
+| category | VARCHAR(100) |  | Genre/category |
+| description | TEXT |  | Book details |
+| price | DECIMAL(10,2) |  | Purchase price |
+| subscription_price | DECIMAL(10,2) |  | Subscription price |
+| type | ENUM('pdf','cd','hardcopy') |  | Book format |
+| file_path | VARCHAR(255) |  | Path to uploaded file |
+| stock | INT |  | Quantity in stock |
+| is_free | TINYINT(1) |  | 1 if free, else 0 |
+| created_at | DATETIME |  | Created timestamp |
+
+---
 
 ### 4️⃣ `orders`
-| order_id | user_id FK | book_id FK | quantity | order_type | total_amount | status (pending/paid) | order_date |
+| Field | Type | Key | Description |
+|-------|------|-----|-------------|
+| order_id | INT | PK | Unique ID |
+| user_id | INT | FK | Linked to users.user_id |
+| book_id | INT | FK | Linked to books.book_id |
+| quantity | INT |  | Number of copies |
+| order_type | VARCHAR(20) |  | Type of order |
+| total_amount | DECIMAL(10,2) |  | Total cost |
+| status | ENUM('pending','paid') |  | Order status |
+| order_date | DATETIME |  | Timestamp |
+
+---
 
 ### 5️⃣ `payments`
-| payment_id | order_id FK | payment_method | amount | payment_status | payment_date |
+| Field | Type | Key | Description |
+|-------|------|-----|-------------|
+| payment_id | INT | PK | Unique ID |
+| order_id | INT | FK | Linked to orders.order_id |
+| payment_method | VARCHAR(50) |  | e.g., card, PayPal |
+| amount | DECIMAL(10,2) |  | Amount paid |
+| payment_status | ENUM('pending','completed') |  | Payment state |
+| payment_date | DATETIME |  | Timestamp |
+
+---
 
 ### 6️⃣ `competitions`
-| comp_id | title | type (essay/story) | topic | start_date | end_date | prize | status |
+| Field | Type | Key | Description |
+|-------|------|-----|-------------|
+| comp_id | INT | PK | Unique ID |
+| title | VARCHAR(255) |  | Competition title |
+| type | ENUM('essay','story') |  | Type of contest |
+| topic | TEXT |  | Topic description |
+| start_date | DATETIME |  | Start date |
+| end_date | DATETIME |  | End date |
+| prize | VARCHAR(255) |  | Reward/prize |
+| status | ENUM('active','closed') |  | Competition status |
+
+---
 
 ### 7️⃣ `submissions`
-| submission_id | comp_id FK | user_id FK | file_path | submitted_at |
+| Field | Type | Key | Description |
+|-------|------|-----|-------------|
+| submission_id | INT | PK | Unique ID |
+| comp_id | INT | FK | Linked to competitions.comp_id |
+| user_id | INT | FK | Linked to users.user_id |
+| file_path | VARCHAR(255) |  | Uploaded essay path |
+| submitted_at | DATETIME |  | Submission timestamp |
+
+---
 
 ### 8️⃣ `winners`
-| winner_id | comp_id FK | user_id FK | position | prize | announced_at |
+| Field | Type | Key | Description |
+|-------|------|-----|-------------|
+| winner_id | INT | PK | Unique ID |
+| comp_id | INT | FK | Linked to competitions.comp_id |
+| user_id | INT | FK | Linked to users.user_id |
+| position | VARCHAR(50) |  | e.g., 1st, 2nd, 3rd |
+| prize | VARCHAR(255) |  | Award received |
+| announced_at | DATETIME |  | Announcement date |
 
-> All foreign keys use **ON DELETE CASCADE** for relational integrity.
+---
+
+> 🧩 **Note:** All foreign keys use `ON DELETE CASCADE` for relational integrity.
 
 ---
 
