@@ -4,12 +4,10 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Default active page name
 $current_page = basename($_SERVER['PHP_SELF']);
-
 ?>
 
-<aside class="admin-sidebar">
+<aside class="admin-sidebar" id="adminSidebar">
     <div class="sidebar-header">
         <div class="admin-brand">
             <i class="bi bi-shield-check"></i>
@@ -41,9 +39,6 @@ $current_page = basename($_SERVER['PHP_SELF']);
                 <a href="manage_orders.php" class="nav-link">
                     <i class="bi bi-bag-check"></i>
                     <span>Manage Orders</span>
-                    <?php if (isset($stats['pending_orders']) && $stats['pending_orders'] > 0): ?>
-                        <span class="badge-notify"><?php echo $stats['pending_orders']; ?></span>
-                    <?php endif; ?>
                 </a>
             </li>
             <li class="nav-item <?php echo isActive('manage_competitions.php'); ?>">
@@ -89,3 +84,6 @@ $current_page = basename($_SERVER['PHP_SELF']);
         </a>
     </div>
 </aside>
+
+<!-- Mobile Sidebar Overlay -->
+<div class="sidebar-overlay" id="sidebarOverlay"></div>

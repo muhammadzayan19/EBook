@@ -104,5 +104,6 @@ $in_subdirectory = in_array($current_page, ['login.php', 'register.php', 'books.
             }, false);
         });
     </script>
+    <script src="../assets/js/admin_sidebar.js"></script>
 </body>
 </html>

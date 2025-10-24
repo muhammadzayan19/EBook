@@ -24,6 +24,17 @@ if (!$book) {
 
 $page_title = $book['title'];
 
+// Function to get book image path
+function getBookImage($book) {
+    if (!empty($book['image_path']) && file_exists('../' . $book['image_path'])) {
+        return '../' . $book['image_path'];
+    } elseif (!empty($book['image_path']) && file_exists($book['image_path'])) {
+        return $book['image_path'];
+    } else {
+        return '../assets/images/books/default.jpg';
+    }
+}
+
 include '../includes/header.php';
 
 $has_purchased = false;
@@ -78,10 +89,12 @@ $related_stmt->close();
             <!-- Book Image & Quick Actions -->
             <div class="col-lg-4 mb-4">
                 <div class="book-details-image-wrapper">
-                    <div class="book-details-image">
-                        <img src="../assets/images/books/default.jpg" 
+                    <div class="book-details-image" style="position: relative; overflow: hidden;">
+                        <img src="<?php echo getBookImage($book); ?>" 
                              alt="<?php echo htmlspecialchars($book['title']); ?>" 
-                             class="img-fluid">
+                             class="img-fluid"
+                             style="width: 100%; height: auto; max-height: 500px; object-fit: cover; border-radius: 8px;"
+                             onerror="this.src='../assets/images/books/default.jpg'">
                         
                         <?php if ($book['is_free']): ?>
                             <div class="book-details-badge badge-free">FREE</div>
@@ -346,10 +359,12 @@ $related_stmt->close();
             <?php while ($related = $related_books->fetch_assoc()): ?>
             <div class="col-lg-4 col-md-6 mb-4">
                 <div class="book-card">
-                    <div class="book-image">
-                        <img src="../assets/images/books/default.jpg" 
+                    <div class="book-image" style="position: relative; overflow: hidden; height: 300px;">
+                        <img src="<?php echo getBookImage($related); ?>" 
                              alt="<?php echo htmlspecialchars($related['title']); ?>" 
-                             class="img-fluid">
+                             class="img-fluid"
+                             style="width: 100%; height: 100%; object-fit: cover;"
+                             onerror="this.src='../assets/images/books/default.jpg'">
                     </div>
                     <div class="book-content">
                         <span class="book-category"><?php echo htmlspecialchars($related['category']); ?></span>

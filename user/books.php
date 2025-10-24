@@ -48,6 +48,17 @@ if (!empty($params)) {
 }
 
 $categories_result = $conn->query("SELECT DISTINCT category FROM books ORDER BY category");
+
+// Function to get book image path
+function getBookImage($book) {
+    if (!empty($book['image_path']) && file_exists('../' . $book['image_path'])) {
+        return '../' . $book['image_path'];
+    } elseif (!empty($book['image_path']) && file_exists($book['image_path'])) {
+        return $book['image_path'];
+    } else {
+        return '../assets/images/books/default.jpg';
+    }
+}
 ?>
 
 <!-- Page Header -->
@@ -158,15 +169,19 @@ $categories_result = $conn->query("SELECT DISTINCT category FROM books ORDER BY 
                     <?php while ($book = $result->fetch_assoc()): ?>
                     <div class="col-lg-4 col-md-6 mb-4">
                         <div class="book-card">
-                            <div class="book-image">
-                                <img src="../assets/images/books/default.jpg" 
+                            <div class="book-image" style="position: relative; overflow: hidden; height: 300px;">
+                                <img src="<?php echo getBookImage($book); ?>" 
                                      alt="<?php echo htmlspecialchars($book['title']); ?>" 
-                                     class="img-fluid">
+                                     class="img-fluid"
+                                     style="width: 100%; height: 100%; object-fit: cover;"
+                                     onerror="this.src='../assets/images/books/default.jpg'">
                                 
                                 <?php if ($book['is_free']): ?>
                                 <div class="book-badge badge-free">Free</div>
                                 <?php elseif ($book['stock'] > 0 && $book['stock'] < 10): ?>
                                 <div class="book-badge badge-limited">Limited Stock</div>
+                                <?php elseif ($book['stock'] == 0): ?>
+                                <div class="book-badge badge-outstock">Out of Stock</div>
                                 <?php endif; ?>
                             </div>
                             

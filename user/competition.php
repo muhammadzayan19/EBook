@@ -2,6 +2,7 @@
 session_start();
 
 require_once '../config/db.php';
+$conn->query("UPDATE competitions SET status = 'closed' WHERE end_date < NOW() AND status = 'active'");
 
 $page_title = "Writing Competitions";
 
@@ -13,7 +14,7 @@ $user_id = $is_logged_in ? $_SESSION['user_id'] : null;
 $comp_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
 if ($comp_id > 0) {
-    $stmt = $conn->prepare("SELECT * FROM competitions WHERE comp_id = ? AND LOWER(status) = 'active'");
+    $stmt = $conn->prepare("SELECT * FROM competitions WHERE comp_id = ?");
     $stmt->bind_param("i", $comp_id);
     $stmt->execute();
     $result = $stmt->get_result();

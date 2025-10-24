@@ -149,6 +149,7 @@ EBOOK/
 | subscription_price | DECIMAL(10,2) |  | Subscription price |
 | type | ENUM('pdf','cd','hardcopy') |  | Book format |
 | file_path | VARCHAR(255) |  | Path to uploaded file |
+| image_path | VARCHAR(255) |  | Path to uploaded book image |
 | stock | INT |  | Quantity in stock |
 | is_free | TINYINT(1) |  | 1 if free, else 0 |
 | created_at | DATETIME |  | Created timestamp |

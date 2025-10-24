@@ -46,6 +46,7 @@ $tables = [
     subscription_price DECIMAL(8,2) DEFAULT 0,
     type ENUM('pdf','cd','hardcopy') DEFAULT 'pdf',
     file_path VARCHAR(255),
+    image_path VARCHAR(255) NULL,
     stock INT DEFAULT 0,
     is_free TINYINT(1) DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -82,7 +83,7 @@ $tables = [
     start_date DATETIME,
     end_date DATETIME,
     prize VARCHAR(255),
-    status ENUM('active','upcoming','closed','completed') DEFAULT 'upcoming'
+    status ENUM('active','upcoming','closed','completed') DEFAULT 'upcoming',
     description TEXT
 ) ENGINE=InnoDB;",
 

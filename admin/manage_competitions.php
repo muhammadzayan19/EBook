@@ -12,6 +12,8 @@ if (isset($_GET['success'])) $success_msg = "Competition added successfully!";
 if (isset($_GET['updated'])) $success_msg = "Competition updated successfully!";
 require_once '../config/db.php';
 
+$conn->query("UPDATE competitions SET status = 'closed' WHERE end_date < NOW() AND status = 'active'");
+
 // Handle Add Competition
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_competition'])) {
     $title = mysqli_real_escape_string($conn, $_POST['title']);

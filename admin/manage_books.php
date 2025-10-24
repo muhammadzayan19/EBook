@@ -20,31 +20,59 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_book'])) {
     $type = mysqli_real_escape_string($conn, $_POST['type']);
     $stock = intval($_POST['stock']);
     $is_free = isset($_POST['is_free']) ? 1 : 0;
-    
+
+    // Base directories
+    $book_dir = __DIR__ . '/../uploads/books/';
+    $cover_dir = __DIR__ . '/../uploads/book_covers/';
+    if (!file_exists($book_dir)) mkdir($book_dir, 0777, true);
+    if (!file_exists($cover_dir)) mkdir($cover_dir, 0777, true);
+
+    // Handle PDF file upload
     $file_path = '';
     if (isset($_FILES['pdf_file']) && $_FILES['pdf_file']['error'] == 0) {
-        $upload_dir = '../uploads/books/';
-        if (!file_exists($upload_dir)) {
-            mkdir($upload_dir, 0777, true);
+        $allowed_pdf_types = ['application/pdf'];
+        if (!in_array($_FILES['pdf_file']['type'], $allowed_pdf_types)) {
+            $_SESSION['error_msg'] = "Invalid file format. Only PDF allowed.";
+            header("Location: manage_books.php");
+            exit();
         }
         $file_name = uniqid() . '_' . basename($_FILES['pdf_file']['name']);
-        $file_path = $upload_dir . $file_name;
-        move_uploaded_file($_FILES['pdf_file']['tmp_name'], $file_path);
+        move_uploaded_file($_FILES['pdf_file']['tmp_name'], $book_dir . $file_name);
+        $file_path = 'uploads/books/' . $file_name; // stored relative in DB
     }
-    
-    $query = "INSERT INTO books (title, author, category, description, price, subscription_price, type, file_path, stock, is_free) 
-              VALUES ('$title', '$author', '$category', '$description', $price, $subscription_price, '$type', '$file_path', $stock, $is_free)";
-    
+
+    // Handle book cover image upload
+    $image_path = '';
+    if (isset($_FILES['book_image']) && $_FILES['book_image']['error'] == 0) {
+        $allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+        $file_type = $_FILES['book_image']['type'];
+        if (!in_array($file_type, $allowed_types)) {
+            $_SESSION['error_msg'] = "Invalid image format. Only JPG, PNG, and WEBP allowed.";
+            header("Location: manage_books.php");
+            exit();
+        }
+        if ($_FILES['book_image']['size'] > 2 * 1024 * 1024) { // 2MB limit
+            $_SESSION['error_msg'] = "Image too large. Max 2MB allowed.";
+            header("Location: manage_books.php");
+            exit();
+        }
+        $image_name = uniqid() . '_' . basename($_FILES['book_image']['name']);
+        move_uploaded_file($_FILES['book_image']['tmp_name'], $cover_dir . $image_name);
+        $image_path = 'uploads/book_covers/' . $image_name; // relative path
+    }
+
+    $query = "INSERT INTO books 
+        (title, author, category, description, price, subscription_price, type, file_path, image_path, stock, is_free)
+        VALUES 
+        ('$title', '$author', '$category', '$description', $price, $subscription_price, '$type', '$file_path', '$image_path', $stock, $is_free)";
+
     if (mysqli_query($conn, $query)) {
         $_SESSION['success_msg'] = "Book added successfully!";
-        header("Location: manage_books.php");
-        exit();
     } else {
         $_SESSION['error_msg'] = "Error: " . mysqli_error($conn);
-        header("Location: manage_books.php");
-        exit();
     }
-    
+    header("Location: manage_books.php");
+    exit();
 }
 
 // Handle Update Book
@@ -59,20 +87,65 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_book'])) {
     $type = mysqli_real_escape_string($conn, $_POST['type']);
     $stock = intval($_POST['stock']);
     $is_free = isset($_POST['is_free']) ? 1 : 0;
-    
+
     $file_path_update = "";
+    $image_path_update = "";
+
+    // Handle PDF file update
     if (isset($_FILES['pdf_file']) && $_FILES['pdf_file']['error'] == 0) {
-        $upload_dir = '../uploads/books/';
+        $allowed_pdf_types = ['application/pdf'];
+        if (!in_array($_FILES['pdf_file']['type'], $allowed_pdf_types)) {
+            $_SESSION['error_msg'] = "Invalid file format. Only PDF allowed.";
+            header("Location: manage_books.php");
+            exit();
+        }
+
+        // Delete old PDF
+        $old_file_query = "SELECT file_path FROM books WHERE book_id=$book_id";
+        $old_file_result = mysqli_query($conn, $old_file_query);
+        $old_file_data = mysqli_fetch_assoc($old_file_result);
+        if ($old_file_data && $old_file_data['file_path'] && file_exists(__DIR__ . '/../' . $old_file_data['file_path'])) {
+            unlink(__DIR__ . '/../' . $old_file_data['file_path']);
+        }
+
         $file_name = uniqid() . '_' . basename($_FILES['pdf_file']['name']);
-        $file_path = $upload_dir . $file_name;
-        move_uploaded_file($_FILES['pdf_file']['tmp_name'], $file_path);
-        $file_path_update = ", file_path='$file_path'";
+        move_uploaded_file($_FILES['pdf_file']['tmp_name'], $book_dir . $file_name);
+        $file_path_update = ", file_path='uploads/books/$file_name'";
     }
-    
-    $query = "UPDATE books SET title='$title', author='$author', category='$category', description='$description', 
-              price=$price, subscription_price=$subscription_price, type='$type', stock=$stock, is_free=$is_free $file_path_update 
-              WHERE book_id=$book_id";
-    
+
+    // Handle book cover image update
+    if (isset($_FILES['book_image']) && $_FILES['book_image']['error'] == 0) {
+        $allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+        $file_type = $_FILES['book_image']['type'];
+        if (in_array($file_type, $allowed_types)) {
+            // Delete old image
+            $old_image_query = "SELECT image_path FROM books WHERE book_id=$book_id";
+            $old_image_result = mysqli_query($conn, $old_image_query);
+            $old_image_data = mysqli_fetch_assoc($old_image_result);
+            if ($old_image_data && $old_image_data['image_path'] && file_exists(__DIR__ . '/../' . $old_image_data['image_path'])) {
+                unlink(__DIR__ . '/../' . $old_image_data['image_path']);
+            }
+
+            $image_name = uniqid() . '_' . basename($_FILES['book_image']['name']);
+            move_uploaded_file($_FILES['book_image']['tmp_name'], $cover_dir . $image_name);
+            $image_path_update = ", image_path='uploads/book_covers/$image_name'";
+        }
+    }
+
+    $query = "UPDATE books SET 
+        title='$title', 
+        author='$author', 
+        category='$category', 
+        description='$description',
+        price=$price, 
+        subscription_price=$subscription_price, 
+        type='$type', 
+        stock=$stock, 
+        is_free=$is_free
+        $file_path_update 
+        $image_path_update
+        WHERE book_id=$book_id";
+
     if (mysqli_query($conn, $query)) {
         $_SESSION['success_msg'] = "Book updated successfully!";
     } else {
@@ -80,22 +153,51 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_book'])) {
     }
     header("Location: manage_books.php");
     exit();
-
 }
 
 // Handle Delete Book
 if (isset($_GET['delete'])) {
     $book_id = intval($_GET['delete']);
+
+    // Fetch file paths
+    $file_query = "SELECT file_path, image_path FROM books WHERE book_id = $book_id";
+    $file_result = mysqli_query($conn, $file_query);
+    $file_data = mysqli_fetch_assoc($file_result);
+
+    // Delete from database first
     $query = "DELETE FROM books WHERE book_id = $book_id";
-    
     if (mysqli_query($conn, $query)) {
+
+        // Base absolute path (one level up from /admin)
+        $base_path = realpath(__DIR__ . '/..') . '/';
+
+        // Delete PDF file
+        if (!empty($file_data['file_path'])) {
+            $pdf_full = $base_path . $file_data['file_path'];
+            if (file_exists($pdf_full)) {
+                unlink($pdf_full);
+            } else {
+                error_log("PDF not found: " . $pdf_full);
+            }
+        }
+
+        // Delete Image file
+        if (!empty($file_data['image_path'])) {
+            $img_full = $base_path . $file_data['image_path'];
+            if (file_exists($img_full)) {
+                unlink($img_full);
+            } else {
+                error_log("Image not found: " . $img_full);
+            }
+        }
+
         $_SESSION['success_msg'] = "Book deleted successfully!";
     } else {
-        $_SESSION['error_msg'] = "Error: " . mysqli_error($conn);
+        $_SESSION['error_msg'] = "Error deleting book: " . mysqli_error($conn);
     }
+
     header("Location: manage_books.php");
     exit();
-
 }
 
 // Fetch Books
@@ -170,20 +272,6 @@ include '../includes/header.php';
                     <i class="bi bi-exclamation-triangle"></i> <?php echo $_SESSION['error_msg']; ?>
                 </div>
                 <?php unset($_SESSION['error_msg']); ?>
-            <?php endif; ?>
-
-
-            <?php if (isset($_SESSION['error_msg'])): ?>
-                <div class="alert alert-danger">
-                    <i class="bi bi-exclamation-triangle"></i> <?php echo $_SESSION['error_msg']; ?>
-                </div>
-                <?php unset($_SESSION['error_msg']); ?>
-            <?php endif; ?>
-            
-            <?php if (isset($error_msg)): ?>
-                <div class="alert alert-danger">
-                    <i class="bi bi-exclamation-triangle"></i> <?php echo $error_msg; ?>
-                </div>
             <?php endif; ?>
             
             <!-- Page Header -->
@@ -260,6 +348,21 @@ include '../includes/header.php';
                                 <label class="form-label">Stock *</label>
                                 <input type="number" name="stock" class="form-input" 
                                        value="<?php echo $edit_book ? $edit_book['stock'] : ''; ?>" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Book Cover Image</label>
+                                <input type="file" name="book_image" class="form-input" accept="image/jpeg,image/jpg,image/png,image/webp" onchange="previewImage(event)">
+                                <?php if ($edit_book && $edit_book['image_path']): ?>
+                                    <div class="mt-2">
+                                        <small class="text-muted">Current image:</small>
+                                        <img src="<?php echo htmlspecialchars($edit_book['image_path']); ?>" 
+                                             alt="Current book cover" 
+                                             style="max-width: 150px; display: block; margin-top: 8px; border-radius: 4px; border: 1px solid #ddd;">
+                                    </div>
+                                <?php endif; ?>
+                                <div id="imagePreview" style="margin-top: 10px;"></div>
+                                <small class="text-muted">Accepted formats: JPG, PNG, WEBP (Max 5MB)</small>
                             </div>
                             
                             <div class="form-group">
@@ -351,7 +454,13 @@ include '../includes/header.php';
                     <?php foreach ($books as $book): ?>
                         <div class="book-card-admin">
                             <div class="book-card-image">
-                                <i class="bi bi-book"></i>
+                                <?php if (!empty($book['image_path'])): ?>
+                                    <img src="../<?php echo htmlspecialchars($book['image_path']); ?>" 
+                                        alt="<?php echo htmlspecialchars($book['title']); ?>"
+                                        style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px 8px 0 0;">
+                                <?php else: ?>
+                                    <i class="bi bi-book"></i>
+                                <?php endif; ?>
                                 <?php if ($book['is_free']): ?>
                                     <span class="book-badge-admin badge-free">FREE</span>
                                 <?php elseif ($book['stock'] == 0): ?>
@@ -406,7 +515,44 @@ document.getElementById('toggleSidebar').addEventListener('click', function() {
 
 function toggleAddForm() {
     const form = document.getElementById('bookForm');
-    form.style.display = form.style.display === 'none' ? 'block' : 'none';
+    const imagePreview = document.getElementById('imagePreview');
+    if (form.style.display === 'none') {
+        form.style.display = 'block';
+        form.scrollIntoView({ behavior: 'smooth' });
+    } else {
+        form.style.display = 'none';
+        imagePreview.innerHTML = '';
+    }
+}
+
+function previewImage(event) {
+    const preview = document.getElementById('imagePreview');
+    const file = event.target.files[0];
+    
+    if (file) {
+        // Validate file size (5MB max)
+        if (file.size > 5 * 1024 * 1024) {
+            alert('File size must be less than 5MB');
+            event.target.value = '';
+            preview.innerHTML = '';
+            return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            preview.innerHTML = `
+                <div style="margin-top: 10px;">
+                    <p style="margin-bottom: 5px; font-size: 14px; color: #666;">Preview:</p>
+                    <img src="${e.target.result}" 
+                         alt="Preview" 
+                         style="max-width: 200px; border-radius: 4px; border: 1px solid #ddd;">
+                </div>
+            `;
+        };
+        reader.readAsDataURL(file);
+    } else {
+        preview.innerHTML = '';
+    }
 }
 </script>
 
