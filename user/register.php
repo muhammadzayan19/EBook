@@ -72,13 +72,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 ?>
 
-    <!-- Register Section -->
     <section class="auth-section">
         <div class="container">
             <div class="row justify-content-center">
                 <div class="col-lg-6 col-md-8">
                     <div class="auth-card">
-                        <!-- Logo/Brand -->
                         <div class="auth-header">
                             <div class="auth-logo">
                                 <i class="bi bi-person-plus"></i>
@@ -87,7 +85,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <p class="auth-subtitle">Join our community of readers and writers</p>
                         </div>
 
-                        <!-- Error Message -->
                         <?php if ($error_message): ?>
                         <div class="alert alert-danger alert-dismissible fade show" role="alert">
                             <i class="bi bi-exclamation-triangle me-2"></i><?php echo $error_message; ?>
@@ -95,7 +92,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </div>
                         <?php endif; ?>
 
-                        <!-- Registration Form -->
                         <form method="POST" action="" class="auth-form needs-validation" novalidate>
                             <div class="row">
                                 <div class="col-md-12 mb-4">
@@ -197,7 +193,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </form>
                     </div>
 
-                    <!-- Features -->
                     <div class="row mt-4">
                         <div class="col-md-4 text-center mb-3">
                             <div class="register-feature">
@@ -223,7 +218,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
     </section>
 
-    <!-- Password Toggle and Strength Script -->
     <script>
         function togglePasswords() {
             const password = document.getElementById('password');

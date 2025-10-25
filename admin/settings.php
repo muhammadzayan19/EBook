@@ -67,7 +67,7 @@ $settings = [
     'auto_approve' => getSetting($conn, 'auto_approve', '1')
 ];
 
-include '../includes/header.php';
+include '../includes/admin_header.php';
 ?>
 
 <!-- Admin Settings -->
@@ -424,6 +424,21 @@ include '../includes/header.php';
                                     </div>
                                 </div>
                             </div>
+
+                            <div class="payment-gateway-section" style="margin-top: 1.5rem;">
+                                <h5><i class="bi bi-star-fill"></i> Subscription Settings</h5>
+                                <div class="form-grid-2">
+                                    <div class="form-group">
+                                        <label class="form-label">
+                                            <i class="bi bi-cash-stack"></i>
+                                            Monthly Subscription Price ($)
+                                        </label>
+                                        <input type="number" step="0.01" name="subscription_price" class="form-input" 
+                                            value="<?php echo htmlspecialchars(getSetting($conn, 'monthly_subscription_price', '9.99')); ?>" required>
+                                        <small class="text-muted">Monthly fee for subscription access to all eligible books</small>
+                                    </div>
+                                </div>
+                            </div>
                             
                             <div class="form-check-group">
                                 <label class="form-check-label">
@@ -724,6 +739,4 @@ button:disabled {
 }
 </style>
 
-<?php
-include '../includes/footer.php';
-?>
+<?php include '../includes/admin_footer.php'; ?>

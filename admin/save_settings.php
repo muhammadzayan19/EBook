@@ -127,6 +127,7 @@ else if (isset($_POST['action']) && $_POST['action'] === 'update_payment') {
         updateSetting($conn, 'stripe_publishable', $_POST['stripe_publishable']);
         updateSetting($conn, 'stripe_secret', $_POST['stripe_secret']);
         updateSetting($conn, 'auto_approve', isset($_POST['auto_approve']) ? '1' : '0');
+        updateSetting($conn, 'monthly_subscription_price', floatval($_POST['subscription_price']));
         
         $response = ['success' => true, 'message' => 'Payment settings updated successfully!'];
     } catch (Exception $e) {

@@ -2,6 +2,7 @@
 session_start();
 
 require_once '../config/db.php';
+require_once '../includes/subscription_helper.php';
 
 $book_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
@@ -24,38 +25,48 @@ if (!$book) {
 
 $page_title = $book['title'];
 
-// Function to get book image path
 function getBookImage($book) {
-    if (!empty($book['image_path']) && file_exists('../' . $book['image_path'])) {
-        return '../' . $book['image_path'];
-    } elseif (!empty($book['image_path']) && file_exists($book['image_path'])) {
-        return $book['image_path'];
-    } else {
-        return '../assets/images/books/default.jpg';
+    $paths = [
+        '../' . $book['image_path'],
+        $book['image_path'],
+        '../uploads/book_covers/' . basename($book['image_path'])
+    ];
+    
+    foreach ($paths as $path) {
+        if (!empty($book['image_path']) && file_exists($path)) {
+            return $path;
+        }
     }
+    
+    return '../assets/images/books/default.jpg';
 }
 
 include '../includes/header.php';
 
 $has_purchased = false;
 $can_download = false;
+$has_subscription = false;
+$access_method = null;
+
 if (isset($_SESSION['user_id'])) {
     $user_id = $_SESSION['user_id'];
-    $purchase_check = $conn->prepare("
-        SELECT o.order_id, o.status, p.payment_status 
-        FROM orders o 
-        LEFT JOIN payments p ON o.order_id = p.order_id 
-        WHERE o.user_id = ? AND o.book_id = ?
-    ");
-    $purchase_check->bind_param("ii", $user_id, $book_id);
-    $purchase_check->execute();
-    $purchase_result = $purchase_check->get_result();
-    if ($purchase_result->num_rows > 0) {
-        $order = $purchase_result->fetch_assoc();
+    
+    $subscription = hasActiveSubscription($conn, $user_id);
+    $has_subscription = ($subscription !== false);
+    
+    $purchase = hasPurchasedBook($conn, $user_id, $book_id);
+    if ($purchase) {
         $has_purchased = true;
-        $can_download = ($order['status'] === 'paid' || $order['payment_status'] === 'completed');
+        $can_download = ($purchase['status'] === 'paid' || $purchase['payment_status'] === 'completed');
+        $access_method = 'purchase';
     }
-    $purchase_check->close();
+    
+    if ($has_subscription && $book['is_subscription_allowed']) {
+        $can_download = true;
+        if (!$has_purchased) {
+            $access_method = 'subscription';
+        }
+    }
 }
 
 $related_stmt = $conn->prepare("SELECT * FROM books WHERE category = ? AND book_id != ? LIMIT 3");
@@ -63,9 +74,18 @@ $related_stmt->bind_param("si", $book['category'], $book_id);
 $related_stmt->execute();
 $related_books = $related_stmt->get_result();
 $related_stmt->close();
+
+if (isset($_SESSION['payment_success'])) {
+    echo '<div class="container mt-4">';
+    echo '<div class="alert alert-success alert-dismissible fade show">';
+    echo '<i class="bi bi-check-circle me-2"></i>' . $_SESSION['payment_success'];
+    echo '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+    echo '</div>';
+    echo '</div>';
+    unset($_SESSION['payment_success']);
+}
 ?>
 
-<!-- Page Header -->
 <section class="page-header">
     <div class="container">
         <div class="row">
@@ -82,11 +102,9 @@ $related_stmt->close();
     </div>
 </section>
 
-<!-- Book Details Section -->
 <section class="book-details-section py-5">
     <div class="container">
         <div class="row">
-            <!-- Book Image & Quick Actions -->
             <div class="col-lg-4 mb-4">
                 <div class="book-details-image-wrapper">
                     <div class="book-details-image" style="position: relative; overflow: hidden;">
@@ -98,6 +116,10 @@ $related_stmt->close();
                         
                         <?php if ($book['is_free']): ?>
                             <div class="book-details-badge badge-free">FREE</div>
+                        <?php elseif ($has_subscription && $book['is_subscription_allowed']): ?>
+                            <div class="book-details-badge" style="background: #28a745;">
+                                <i class="bi bi-check-circle me-1"></i>Included in Subscription
+                            </div>
                         <?php elseif ($book['stock'] > 0 && $book['stock'] < 10): ?>
                             <div class="book-details-badge badge-limited">Limited Stock</div>
                         <?php elseif ($book['stock'] == 0): ?>
@@ -105,22 +127,40 @@ $related_stmt->close();
                         <?php endif; ?>
                     </div>
                     
-                    <!-- Quick Actions Card -->
                     <div class="quick-actions-card">
+                        <?php if ($access_method === 'subscription'): ?>
+                            <div class="alert alert-success mb-3">
+                                <i class="bi bi-star-fill me-2"></i>
+                                <strong>Included with your subscription!</strong>
+                            </div>
+                        <?php elseif ($has_purchased): ?>
+                            <div class="alert alert-info mb-3">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>You own this book</strong>
+                            </div>
+                        <?php endif; ?>
+                        
                         <div class="price-section">
                             <?php if ($book['is_free']): ?>
                                 <div class="price-main price-free">FREE</div>
+                            <?php elseif ($has_subscription && $book['is_subscription_allowed']): ?>
+                                <div class="price-main text-success">
+                                    <i class="bi bi-check-circle-fill"></i> Included
+                                </div>
+                                <div class="price-alternative text-muted">
+                                    Or buy for $<?php echo number_format($book['price'], 2); ?>
+                                </div>
                             <?php else: ?>
                                 <div class="price-main">$<?php echo number_format($book['price'], 2); ?></div>
-                                <?php if ($book['subscription_price'] > 0): ?>
+                                <?php if ($book['is_subscription_allowed']): ?>
                                     <div class="price-subscription">
-                                        <i class="bi bi-arrow-repeat me-1"></i>
-                                        $<?php echo number_format($book['subscription_price'], 2); ?>/year subscription
+                                        <i class="bi bi-star-fill me-1"></i>
+                                        Available with subscription
                                     </div>
                                 <?php endif; ?>
                             <?php endif; ?>
                         </div>
-                        
+
                         <div class="stock-info">
                             <?php if ($book['stock'] > 0): ?>
                                 <i class="bi bi-check-circle-fill text-success"></i>
@@ -130,27 +170,69 @@ $related_stmt->close();
                                 <span class="text-danger fw-bold">Out of Stock</span>
                             <?php endif; ?>
                         </div>
-                        
+
                         <div class="action-buttons">
-                            <?php if ($has_purchased): ?>
-                                <?php if ($can_download && $book['type'] === 'pdf'): ?>
-                                    <a href="download.php?book_id=<?php echo $book_id; ?>" class="btn btn-success btn-lg w-100 mb-2">
-                                        <i class="bi bi-download me-2"></i>Download PDF
-                                    </a>
-                                <?php else: ?>
-                                    <button class="btn btn-secondary btn-lg w-100 mb-2" disabled>
-                                        <i class="bi bi-check-circle me-2"></i>Already Purchased
-                                    </button>
+                            <?php if ($can_download && $book['type'] === 'pdf'): ?>
+                                <a href="../get_book.php?id=<?php echo $book_id; ?>" 
+                                class="btn btn-success btn-lg w-100 mb-2"
+                                target="_blank">
+                                    <i class="bi bi-download me-2"></i>Download PDF
+                                </a>
+                                <?php if ($access_method === 'subscription'): ?>
+                                    <small class="text-muted d-block mb-2">
+                                        <i class="bi bi-info-circle me-1"></i>Access via subscription
+                                    </small>
                                 <?php endif; ?>
+                                
+                            <?php elseif ($has_purchased && $book['type'] !== 'pdf'): ?>
+                                <button class="btn btn-secondary btn-lg w-100 mb-2" disabled>
+                                    <i class="bi bi-check-circle me-2"></i>Already Purchased
+                                </button>
+                                <small class="text-muted d-block mb-2">
+                                    <?php echo strtoupper($book['type']); ?> will be shipped to you
+                                </small>
+                                
                             <?php else: ?>
-                                <?php if ($book['stock'] > 0): ?>
-                                    <a href="order.php?id=<?php echo $book_id; ?>" class="btn btn-primary btn-lg w-100 mb-2">
-                                        <i class="bi bi-cart-plus me-2"></i>Buy Now
+                                <?php if (!isset($_SESSION['user_id'])): ?>
+                                    <a href="../auth/login.php" class="btn btn-primary btn-lg w-100 mb-2">
+                                        <i class="bi bi-box-arrow-in-right me-2"></i>Login to Access
                                     </a>
+                                    
+                                <?php elseif ($has_subscription && $book['is_subscription_allowed']): ?>
+                                    <?php if ($book['type'] === 'pdf'): ?>
+                                        <a href="../get_book.php?id=<?php echo $book_id; ?>" 
+                                        class="btn btn-success btn-lg w-100 mb-2"
+                                        target="_blank">
+                                            <i class="bi bi-download me-2"></i>Download (Subscription)
+                                        </a>
+                                    <?php else: ?>
+                                        <button class="btn btn-secondary btn-lg w-100 mb-2" disabled>
+                                            <i class="bi bi-info-circle me-2"></i>Physical copies not included
+                                        </button>
+                                        <a href="order.php?id=<?php echo $book_id; ?>" 
+                                        class="btn btn-outline-primary w-100 mb-2">
+                                            <i class="bi bi-cart-plus me-2"></i>Buy Physical Copy
+                                        </a>
+                                    <?php endif; ?>
+                                    
                                 <?php else: ?>
-                                    <button class="btn btn-secondary btn-lg w-100 mb-2" disabled>
-                                        <i class="bi bi-x-circle me-2"></i>Out of Stock
-                                    </button>
+                                    <?php if ($book['stock'] > 0 || $book['type'] === 'pdf'): ?>
+                                        <a href="order.php?id=<?php echo $book_id; ?>" 
+                                        class="btn btn-primary btn-lg w-100 mb-2">
+                                            <i class="bi bi-cart-plus me-2"></i>Buy Now
+                                        </a>
+                                        
+                                        <?php if ($book['is_subscription_allowed'] && !$has_subscription): ?>
+                                            <a href="subscribe.php" 
+                                            class="btn btn-outline-primary w-100 mb-2">
+                                                <i class="bi bi-star me-2"></i>Subscribe for Access
+                                            </a>
+                                        <?php endif; ?>
+                                    <?php else: ?>
+                                        <button class="btn btn-secondary btn-lg w-100 mb-2" disabled>
+                                            <i class="bi bi-x-circle me-2"></i>Out of Stock
+                                        </button>
+                                    <?php endif; ?>
                                 <?php endif; ?>
                             <?php endif; ?>
                             
@@ -160,7 +242,6 @@ $related_stmt->close();
                         </div>
                     </div>
                     
-                    <!-- Features List -->
                     <div class="book-features-card">
                         <h6 class="features-title">
                             <i class="bi bi-star-fill me-2"></i>Features
@@ -170,13 +251,21 @@ $related_stmt->close();
                                 <i class="bi bi-check-circle-fill"></i>
                                 <span>Format: <?php echo strtoupper($book['type']); ?></span>
                             </li>
+                            <?php if ($book['type'] === 'pdf'): ?>
                             <li>
                                 <i class="bi bi-check-circle-fill"></i>
-                                <span>Instant Access</span>
+                                <span>Instant Download</span>
                             </li>
+                            <?php endif; ?>
+                            <?php if ($book['is_subscription_allowed']): ?>
                             <li>
                                 <i class="bi bi-check-circle-fill"></i>
-                                <span>Lifetime Updates</span>
+                                <span>Subscription Available</span>
+                            </li>
+                            <?php endif; ?>
+                            <li>
+                                <i class="bi bi-check-circle-fill"></i>
+                                <span>Lifetime Access</span>
                             </li>
                             <li>
                                 <i class="bi bi-check-circle-fill"></i>
@@ -187,22 +276,15 @@ $related_stmt->close();
                 </div>
             </div>
             
-            <!-- Book Information -->
             <div class="col-lg-8">
                 <div class="book-details-content">
-                    <!-- Category Badge -->
                     <span class="book-details-category"><?php echo htmlspecialchars($book['category']); ?></span>
-                    
-                    <!-- Title -->
                     <h1 class="book-details-title"><?php echo htmlspecialchars($book['title']); ?></h1>
-                    
-                    <!-- Author -->
                     <div class="book-details-author">
                         <i class="bi bi-person-fill me-2"></i>
                         By <strong><?php echo htmlspecialchars($book['author']); ?></strong>
                     </div>
                     
-                    <!-- Meta Information -->
                     <div class="book-details-meta">
                         <div class="meta-item">
                             <i class="bi bi-calendar3"></i>
@@ -227,7 +309,6 @@ $related_stmt->close();
                         </div>
                     </div>
                     
-                    <!-- Tabs -->
                     <div class="book-details-tabs">
                         <ul class="nav nav-tabs" id="bookTabs" role="tablist">
                             <li class="nav-item" role="presentation">
@@ -251,7 +332,6 @@ $related_stmt->close();
                         </ul>
                         
                         <div class="tab-content" id="bookTabsContent">
-                            <!-- Description Tab -->
                             <div class="tab-pane fade show active" id="description" role="tabpanel">
                                 <div class="tab-content-wrapper">
                                     <h4 class="content-subtitle">About This Book</h4>
@@ -269,8 +349,7 @@ $related_stmt->close();
                                     </ul>
                                 </div>
                             </div>
-                            
-                            <!-- Details Tab -->
+
                             <div class="tab-pane fade" id="details" role="tabpanel">
                                 <div class="tab-content-wrapper">
                                     <h4 class="content-subtitle">Book Specifications</h4>
@@ -297,6 +376,16 @@ $related_stmt->close();
                                                 <?php echo $book['is_free'] ? 'FREE' : '$' . number_format($book['price'], 2); ?>
                                             </td>
                                         </tr>
+                                        <?php if ($book['is_subscription_allowed']): ?>
+                                        <tr>
+                                            <td class="detail-label">Subscription:</td>
+                                            <td class="detail-value">
+                                                <span class="badge bg-warning text-dark">
+                                                    <i class="bi bi-star-fill me-1"></i>Available with subscription
+                                                </span>
+                                            </td>
+                                        </tr>
+                                        <?php endif; ?>
                                         <tr>
                                             <td class="detail-label">Stock:</td>
                                             <td class="detail-value"><?php echo $book['stock']; ?> available</td>
@@ -309,7 +398,6 @@ $related_stmt->close();
                                 </div>
                             </div>
                             
-                            <!-- Reviews Tab -->
                             <div class="tab-pane fade" id="reviews" role="tabpanel">
                                 <div class="tab-content-wrapper">
                                     <h4 class="content-subtitle">Customer Reviews</h4>
@@ -344,7 +432,6 @@ $related_stmt->close();
     </div>
 </section>
 
-<!-- Related Books Section -->
 <?php if ($related_books->num_rows > 0): ?>
 <section class="related-books-section py-5 bg-light">
     <div class="container">

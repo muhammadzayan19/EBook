@@ -122,7 +122,7 @@ if (isset($_GET['edit_winner'])) {
     $edit_winner = mysqli_fetch_assoc($edit_result);
 }
 
-include '../includes/header.php';
+include '../includes/admin_header.php';
 ?>
 
 <div class="admin-wrapper">
@@ -220,7 +220,7 @@ include '../includes/header.php';
             <!-- Statistics Cards -->
             <div class="winners-stats-grid">
                 <div class="winner-stat-card stat-primary">
-                    <div class="stat-icon">
+                    <div class="stat-icon admin-stat-icon">
                         <i class="bi bi-trophy-fill"></i>
                     </div>
                     <div class="stat-content">
@@ -230,7 +230,7 @@ include '../includes/header.php';
                 </div>
                 
                 <div class="winner-stat-card stat-success">
-                    <div class="stat-icon">
+                    <div class="stat-icon admin-stat-icon">
                         <i class="bi bi-file-earmark-text"></i>
                     </div>
                     <div class="stat-content">
@@ -240,7 +240,7 @@ include '../includes/header.php';
                 </div>
                 
                 <div class="winner-stat-card stat-warning">
-                    <div class="stat-icon">
+                    <div class="stat-icon admin-stat-icon">
                         <i class="bi bi-hourglass-split"></i>
                     </div>
                     <div class="stat-content">
@@ -250,7 +250,7 @@ include '../includes/header.php';
                 </div>
                 
                 <div class="winner-stat-card stat-info">
-                    <div class="stat-icon">
+                    <div class="stat-icon admin-stat-icon">
                         <i class="bi bi-currency-dollar"></i>
                     </div>
                     <div class="stat-content">
@@ -514,4 +514,4 @@ function toggleWinnerForm() {
 }
 </script>
 
-<?php include '../includes/footer.php'; ?>
+<?php include '../includes/admin_footer.php';?>

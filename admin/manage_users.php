@@ -115,16 +115,73 @@ $offset = ($page - 1) * $limit;
 // Build query
 $where_conditions = ["1=1"];
 
+// REPLACE the entire query building section
+$params = [];
+$types = "";
+
 if ($search) {
-    $where_conditions[] = "(full_name LIKE '%$search%' OR email LIKE '%$search%' OR phone LIKE '%$search%')";
+    $search_param = "%$search%";
+    $where_conditions[] = "(full_name LIKE ? OR email LIKE ? OR phone LIKE ?)";
+    $params[] = $search_param;
+    $params[] = $search_param;
+    $params[] = $search_param;
+    $types .= "sss";
 }
 
 if ($date_from) {
-    $where_conditions[] = "DATE(registered_at) >= '$date_from'";
+    $where_conditions[] = "DATE(registered_at) >= ?";
+    $params[] = $date_from;
+    $types .= "s";
 }
 
 if ($date_to) {
-    $where_conditions[] = "DATE(registered_at) <= '$date_to'";
+    $where_conditions[] = "DATE(registered_at) <= ?";
+    $params[] = $date_to;
+    $types .= "s";
+}
+
+$where_clause = implode(" AND ", $where_conditions);
+
+// Count with prepared statement
+$count_query = "SELECT COUNT(*) as total FROM users WHERE $where_clause";
+if (!empty($params)) {
+    $count_stmt = $conn->prepare($count_query);
+    $count_stmt->bind_param($types, ...$params);
+    $count_stmt->execute();
+    $count_result = $count_stmt->get_result();
+    $total_records = $count_result->fetch_assoc()['total'];
+    $count_stmt->close();
+} else {
+    $count_result = $conn->query($count_query);
+    $total_records = $count_result->fetch_assoc()['total'];
+}
+
+$total_pages = ceil($total_records / $limit);
+
+// Fetch users with prepared statement
+$query = "SELECT u.*, 
+          COUNT(DISTINCT o.order_id) as order_count,
+          SUM(CASE WHEN o.status = 'paid' THEN o.total_amount ELSE 0 END) as total_spent
+          FROM users u 
+          LEFT JOIN orders o ON u.user_id = o.user_id
+          WHERE $where_clause 
+          GROUP BY u.user_id
+          ORDER BY $sort_by $sort_order 
+          LIMIT ? OFFSET ?";
+
+if (!empty($params)) {
+    $stmt = $conn->prepare($query);
+    $params[] = $limit;
+    $params[] = $offset;
+    $types .= "ii";
+    $stmt->bind_param($types, ...$params);
+    $stmt->execute();
+    $result = $stmt->get_result();
+} else {
+    $stmt = $conn->prepare($query);
+    $stmt->bind_param("ii", $limit, $offset);
+    $stmt->execute();
+    $result = $stmt->get_result();
 }
 
 $where_clause = implode(" AND ", $where_conditions);
@@ -182,7 +239,7 @@ if (isset($_GET['edit'])) {
     $edit_user = mysqli_fetch_assoc($edit_result);
 }
 
-include '../includes/header.php';
+include '../includes/admin_header.php';
 ?>
 
 <div class="admin-wrapper">
@@ -224,7 +281,7 @@ include '../includes/header.php';
             <!-- Statistics Cards -->
             <div class="users-stats-grid">
                 <div class="user-stat-card stat-primary">
-                    <div class="stat-icon">
+                    <div class="stat-icon admin-stat-icon">
                         <i class="bi bi-people-fill"></i>
                     </div>
                     <div class="stat-content">
@@ -233,8 +290,8 @@ include '../includes/header.php';
                     </div>
                 </div>
                 
-                <div class="user-stat-card stat-success">
-                    <div class="stat-icon">
+                <div class="user-stat-card stat-primary">
+                    <div class="stat-icon admin-stat-icon">
                         <i class="bi bi-person-plus-fill"></i>
                     </div>
                     <div class="stat-content">
@@ -243,8 +300,8 @@ include '../includes/header.php';
                     </div>
                 </div>
                 
-                <div class="user-stat-card stat-info">
-                    <div class="stat-icon">
+                <div class="user-stat-card stat-primary">
+                    <div class="stat-icon admin-stat-icon">
                         <i class="bi bi-calendar-week"></i>
                     </div>
                     <div class="stat-content">
@@ -253,8 +310,8 @@ include '../includes/header.php';
                     </div>
                 </div>
                 
-                <div class="user-stat-card stat-warning">
-                    <div class="stat-icon">
+                <div class="user-stat-card stat-primary">
+                    <div class="stat-icon admin-stat-icon">
                         <i class="bi bi-calendar-month"></i>
                     </div>
                     <div class="stat-content">
@@ -611,4 +668,4 @@ window.onclick = function(event) {
 }
 </script>
 
-<?php include '../includes/footer.php'; ?>
+<?php include '../includes/admin_footer.php'; ?>

@@ -3,7 +3,6 @@ $current_page = basename($_SERVER['PHP_SELF']);
 $in_subdirectory = in_array($current_page, ['login.php', 'register.php', 'books.php', 'book_details.php', 'order.php', 'competition.php', 'upload_essay.php', 'profile.php', 'my_orders.php', 'my_submissions.php']) ? '../' : '';
 ?>
 
-    <!-- Footer -->
     <footer class="footer">
         <div class="container">
             <div class="row py-4">
@@ -33,17 +32,15 @@ $in_subdirectory = in_array($current_page, ['login.php', 'register.php', 'books.
                         <li><a href="<?php echo $in_subdirectory; ?>about.php">About Us</a></li>
                         <li><a href="<?php echo $in_subdirectory; ?>user/books.php">Browse Books</a></li>
                         <li><a href="<?php echo $in_subdirectory; ?>user/competition.php">Competitions</a></li>
-                        <li><a href="<?php echo $in_subdirectory; ?>contact.php">Contact</a></li>
                     </ul>
                 </div>
                 
                 <div class="col-lg-3 col-md-6 mb-4 mb-lg-0">
                     <h6>Support</h6>
                     <ul>
-                        <li><a href="#">Help Center</a></li>
+                        <li><a href="<?php echo $in_subdirectory; ?>contact.php">Contact</a></li>
                         <li><a href="#">Privacy Policy</a></li>
                         <li><a href="#">Terms of Service</a></li>
-                        <li><a href="#">FAQ</a></li>
                         <li><a href="<?php echo $in_subdirectory; ?>admin/login.php">Admin Portal</a></li>
                     </ul>
                 </div>

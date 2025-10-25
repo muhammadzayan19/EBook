@@ -1,10 +1,14 @@
 <?php
-// Ensure session is active
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
 $current_page = basename($_SERVER['PHP_SELF']);
+
+function isActiveSidebar($page) {
+    global $current_page;
+    return ($current_page === $page) ? 'active' : '';
+}
 ?>
 
 <aside class="admin-sidebar" id="adminSidebar">
@@ -17,49 +21,55 @@ $current_page = basename($_SERVER['PHP_SELF']);
 
     <nav class="sidebar-nav">
         <ul class="nav-list">
-            <li class="nav-item <?php echo isActive('index.php'); ?>">
+            <li class="nav-item <?php echo isActiveSidebar('index.php'); ?>">
                 <a href="index.php" class="nav-link">
                     <i class="bi bi-speedometer2"></i>
                     <span>Dashboard</span>
                 </a>
             </li>
-            <li class="nav-item <?php echo isActive('manage_books.php'); ?>">
+            <li class="nav-item <?php echo isActiveSidebar('manage_books.php'); ?>">
                 <a href="manage_books.php" class="nav-link">
                     <i class="bi bi-book"></i>
                     <span>Manage Books</span>
                 </a>
             </li>
-            <li class="nav-item <?php echo isActive('manage_users.php'); ?>">
+            <li class="nav-item <?php echo isActiveSidebar('manage_users.php'); ?>">
                 <a href="manage_users.php" class="nav-link">
                     <i class="bi bi-people"></i>
                     <span>Manage Users</span>
                 </a>
             </li>
-            <li class="nav-item <?php echo isActive('manage_orders.php'); ?>">
+            <li class="nav-item <?php echo isActiveSidebar('manage_subscriptions.php'); ?>">
+                <a href="manage_subscriptions.php" class="nav-link">
+                    <i class="bi bi-star-fill"></i>
+                    <span>Manage Subscriptions</span>
+                </a>
+            </li>
+            <li class="nav-item <?php echo isActiveSidebar('manage_orders.php'); ?>">
                 <a href="manage_orders.php" class="nav-link">
                     <i class="bi bi-bag-check"></i>
                     <span>Manage Orders</span>
                 </a>
             </li>
-            <li class="nav-item <?php echo isActive('manage_competitions.php'); ?>">
+            <li class="nav-item <?php echo isActiveSidebar('manage_competitions.php'); ?>">
                 <a href="manage_competitions.php" class="nav-link">
                     <i class="bi bi-trophy"></i>
-                    <span>Competitions</span>
+                    <span>Manage Competitions</span>
                 </a>
             </li>
-            <li class="nav-item <?php echo isActive('winners.php'); ?>">
+            <li class="nav-item <?php echo isActiveSidebar('winners.php'); ?>">
                 <a href="winners.php" class="nav-link">
                     <i class="bi bi-award"></i>
-                    <span>Winners</span>
+                    <span>Manage Winners</span>
                 </a>
             </li>
-            <li class="nav-item <?php echo isActive('payments.php'); ?>">
+            <li class="nav-item <?php echo isActiveSidebar('payments.php'); ?>">
                 <a href="payments.php" class="nav-link">
                     <i class="bi bi-credit-card"></i>
                     <span>Payments</span>
                 </a>
             </li>
-            <li class="nav-item <?php echo isActive('settings.php'); ?>">
+            <li class="nav-item <?php echo isActiveSidebar('settings.php'); ?>">
                 <a href="settings.php" class="nav-link">
                     <i class="bi bi-gear"></i>
                     <span>Settings</span>
@@ -85,5 +95,4 @@ $current_page = basename($_SERVER['PHP_SELF']);
     </div>
 </aside>
 
-<!-- Mobile Sidebar Overlay -->
 <div class="sidebar-overlay" id="sidebarOverlay"></div>

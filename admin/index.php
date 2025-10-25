@@ -12,30 +12,101 @@ require_once '../config/db.php';
 
 $stats = [];
 
+// Total Books
 $query = "SELECT COUNT(*) as total FROM books";
 $result = mysqli_query($conn, $query);
 $stats['total_books'] = mysqli_fetch_assoc($result)['total'];
 
+// Books added this month
+$query = "SELECT COUNT(*) as total FROM books WHERE MONTH(created_at) = MONTH(CURRENT_DATE()) AND YEAR(created_at) = YEAR(CURRENT_DATE())";
+$result = mysqli_query($conn, $query);
+$stats['books_this_month'] = mysqli_fetch_assoc($result)['total'];
+
+// Books added last month
+$query = "SELECT COUNT(*) as total FROM books WHERE MONTH(created_at) = MONTH(CURRENT_DATE() - INTERVAL 1 MONTH) AND YEAR(created_at) = YEAR(CURRENT_DATE() - INTERVAL 1 MONTH)";
+$result = mysqli_query($conn, $query);
+$stats['books_last_month'] = mysqli_fetch_assoc($result)['total'];
+
+// Calculate book growth percentage
+$stats['books_growth'] = 0;
+if ($stats['books_last_month'] > 0) {
+    $stats['books_growth'] = (($stats['books_this_month'] - $stats['books_last_month']) / $stats['books_last_month']) * 100;
+}
+
+// Total Users
 $query = "SELECT COUNT(*) as total FROM users";
 $result = mysqli_query($conn, $query);
 $stats['total_users'] = mysqli_fetch_assoc($result)['total'];
 
+// Users registered this month
+$query = "SELECT COUNT(*) as total FROM users WHERE MONTH(registered_at) = MONTH(CURRENT_DATE()) AND YEAR(registered_at) = YEAR(CURRENT_DATE())";
+$result = mysqli_query($conn, $query);
+$stats['users_this_month'] = mysqli_fetch_assoc($result)['total'];
+
+// Users registered last month
+$query = "SELECT COUNT(*) as total FROM users WHERE MONTH(registered_at) = MONTH(CURRENT_DATE() - INTERVAL 1 MONTH) AND YEAR(registered_at) = YEAR(CURRENT_DATE() - INTERVAL 1 MONTH)";
+$result = mysqli_query($conn, $query);
+$stats['users_last_month'] = mysqli_fetch_assoc($result)['total'];
+
+// Calculate user growth percentage
+$stats['users_growth'] = 0;
+if ($stats['users_last_month'] > 0) {
+    $stats['users_growth'] = (($stats['users_this_month'] - $stats['users_last_month']) / $stats['users_last_month']) * 100;
+}
+
+// Total Orders
 $query = "SELECT COUNT(*) as total FROM orders";
 $result = mysqli_query($conn, $query);
 $stats['total_orders'] = mysqli_fetch_assoc($result)['total'];
 
+// Orders this month
+$query = "SELECT COUNT(*) as total FROM orders WHERE MONTH(order_date) = MONTH(CURRENT_DATE()) AND YEAR(order_date) = YEAR(CURRENT_DATE())";
+$result = mysqli_query($conn, $query);
+$stats['orders_this_month'] = mysqli_fetch_assoc($result)['total'];
+
+// Orders last month
+$query = "SELECT COUNT(*) as total FROM orders WHERE MONTH(order_date) = MONTH(CURRENT_DATE() - INTERVAL 1 MONTH) AND YEAR(order_date) = YEAR(CURRENT_DATE() - INTERVAL 1 MONTH)";
+$result = mysqli_query($conn, $query);
+$stats['orders_last_month'] = mysqli_fetch_assoc($result)['total'];
+
+// Calculate order growth percentage
+$stats['orders_growth'] = 0;
+if ($stats['orders_last_month'] > 0) {
+    $stats['orders_growth'] = (($stats['orders_this_month'] - $stats['orders_last_month']) / $stats['orders_last_month']) * 100;
+}
+
+// Pending Orders
 $query = "SELECT COUNT(*) as total FROM orders WHERE status = 'pending'";
 $result = mysqli_query($conn, $query);
 $stats['pending_orders'] = mysqli_fetch_assoc($result)['total'];
 
+// Active Competitions
 $query = "SELECT COUNT(*) as total FROM competitions WHERE status = 'active'";
 $result = mysqli_query($conn, $query);
 $stats['active_competitions'] = mysqli_fetch_assoc($result)['total'];
 
+// Total Revenue
 $query = "SELECT SUM(total_amount) as total FROM orders WHERE status = 'paid'";
 $result = mysqli_query($conn, $query);
 $stats['total_revenue'] = mysqli_fetch_assoc($result)['total'] ?? 0;
 
+// Revenue this month
+$query = "SELECT SUM(total_amount) as total FROM orders WHERE status = 'paid' AND MONTH(order_date) = MONTH(CURRENT_DATE()) AND YEAR(order_date) = YEAR(CURRENT_DATE())";
+$result = mysqli_query($conn, $query);
+$stats['revenue_this_month'] = mysqli_fetch_assoc($result)['total'] ?? 0;
+
+// Revenue last month
+$query = "SELECT SUM(total_amount) as total FROM orders WHERE status = 'paid' AND MONTH(order_date) = MONTH(CURRENT_DATE() - INTERVAL 1 MONTH) AND YEAR(order_date) = YEAR(CURRENT_DATE() - INTERVAL 1 MONTH)";
+$result = mysqli_query($conn, $query);
+$stats['revenue_last_month'] = mysqli_fetch_assoc($result)['total'] ?? 0;
+
+// Calculate revenue growth percentage
+$stats['revenue_growth'] = 0;
+if ($stats['revenue_last_month'] > 0) {
+    $stats['revenue_growth'] = (($stats['revenue_this_month'] - $stats['revenue_last_month']) / $stats['revenue_last_month']) * 100;
+}
+
+// Recent Orders
 $recent_orders = [];
 $query = "SELECT o.*, u.full_name, b.title as book_title 
           FROM orders o 
@@ -48,6 +119,7 @@ while ($row = mysqli_fetch_assoc($result)) {
     $recent_orders[] = $row;
 }
 
+// Recent Users
 $recent_users = [];
 $query = "SELECT * FROM users ORDER BY registered_at DESC LIMIT 5";
 $result = mysqli_query($conn, $query);
@@ -55,6 +127,7 @@ while ($row = mysqli_fetch_assoc($result)) {
     $recent_users[] = $row;
 }
 
+// Popular Books
 $popular_books = [];
 $query = "SELECT b.*, COUNT(o.order_id) as order_count 
           FROM books b 
@@ -67,7 +140,7 @@ while ($row = mysqli_fetch_assoc($result)) {
     $popular_books[] = $row;
 }
 
-include '../includes/header.php';
+include '../includes/admin_header.php';
 ?>
 
 <!-- Admin Dashboard -->
@@ -99,7 +172,7 @@ include '../includes/header.php';
             <div class="stats-grid">
                 <!-- Total Books -->
                 <div class="stat-card stat-primary">
-                    <div class="stat-icon">
+                    <div class="stat-icon admin-stat-icon">
                         <i class="bi bi-book-fill"></i>
                     </div>
                     <div class="stat-details">
@@ -107,14 +180,21 @@ include '../includes/header.php';
                         <p class="stat-label">Total Books</p>
                     </div>
                     <div class="stat-trend">
-                        <i class="bi bi-arrow-up"></i>
-                        <span>12% this month</span>
+                        <?php 
+                        $growth = $stats['books_growth'];
+                        $icon = $growth >= 0 ? 'arrow-up' : 'arrow-down';
+                        $color = $growth >= 0 ? 'text-success' : 'text-danger';
+                        ?>
+                        <i class="bi bi-<?php echo $icon; ?> <?php echo $color; ?>"></i>
+                        <span class="<?php echo $color; ?>">
+                            <?php echo abs(round($growth, 1)); ?>% this month
+                        </span>
                     </div>
                 </div>
                 
                 <!-- Total Users -->
-                <div class="stat-card stat-success">
-                    <div class="stat-icon">
+                <div class="stat-card stat-primary">
+                    <div class="stat-icon admin-stat-icon">
                         <i class="bi bi-people-fill"></i>
                     </div>
                     <div class="stat-details">
@@ -122,14 +202,21 @@ include '../includes/header.php';
                         <p class="stat-label">Total Users</p>
                     </div>
                     <div class="stat-trend">
-                        <i class="bi bi-arrow-up"></i>
-                        <span>8% this month</span>
+                        <?php 
+                        $growth = $stats['users_growth'];
+                        $icon = $growth >= 0 ? 'arrow-up' : 'arrow-down';
+                        $color = $growth >= 0 ? 'text-success' : 'text-danger';
+                        ?>
+                        <i class="bi bi-<?php echo $icon; ?> <?php echo $color; ?>"></i>
+                        <span class="<?php echo $color; ?>">
+                            <?php echo abs(round($growth, 1)); ?>% this month
+                        </span>
                     </div>
                 </div>
                 
                 <!-- Total Orders -->
-                <div class="stat-card stat-warning">
-                    <div class="stat-icon">
+                <div class="stat-card stat-primary">
+                    <div class="stat-icon admin-stat-icon">
                         <i class="bi bi-bag-fill"></i>
                     </div>
                     <div class="stat-details">
@@ -137,14 +224,21 @@ include '../includes/header.php';
                         <p class="stat-label">Total Orders</p>
                     </div>
                     <div class="stat-trend">
-                        <i class="bi bi-arrow-up"></i>
-                        <span>15% this month</span>
+                        <?php 
+                        $growth = $stats['orders_growth'];
+                        $icon = $growth >= 0 ? 'arrow-up' : 'arrow-down';
+                        $color = $growth >= 0 ? 'text-success' : 'text-danger';
+                        ?>
+                        <i class="bi bi-<?php echo $icon; ?> <?php echo $color; ?>"></i>
+                        <span class="<?php echo $color; ?>">
+                            <?php echo abs(round($growth, 1)); ?>% this month
+                        </span>
                     </div>
                 </div>
                 
                 <!-- Total Revenue -->
-                <div class="stat-card stat-info">
-                    <div class="stat-icon">
+                <div class="stat-card stat-primary">
+                    <div class="stat-icon admin-stat-icon">
                         <i class="bi bi-currency-dollar"></i>
                     </div>
                     <div class="stat-details">
@@ -152,8 +246,15 @@ include '../includes/header.php';
                         <p class="stat-label">Total Revenue</p>
                     </div>
                     <div class="stat-trend">
-                        <i class="bi bi-arrow-up"></i>
-                        <span>20% this month</span>
+                        <?php 
+                        $growth = $stats['revenue_growth'];
+                        $icon = $growth >= 0 ? 'arrow-up' : 'arrow-down';
+                        $color = $growth >= 0 ? 'text-success' : 'text-danger';
+                        ?>
+                        <i class="bi bi-<?php echo $icon; ?> <?php echo $color; ?>"></i>
+                        <span class="<?php echo $color; ?>">
+                            <?php echo abs(round($growth, 1)); ?>% this month
+                        </span>
                     </div>
                 </div>
             </div>
@@ -307,6 +408,4 @@ document.getElementById('toggleSidebar').addEventListener('click', function() {
 });
 </script>
 
-<?php
-include '../includes/footer.php';
-?>
+<?php include '../includes/admin_footer.php'; ?>

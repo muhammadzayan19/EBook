@@ -9,6 +9,91 @@ if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== tru
 $page_title = "Manage Books";
 require_once '../config/db.php';
 
+/**
+ * Compress and convert image to WebP format
+ */
+function compressAndConvertToWebP($source_path, $destination_dir, $quality = 80, $max_width = 800, $max_height = 1200) {
+    if (!extension_loaded('gd')) {
+        error_log("GD library not available");
+        return false;
+    }
+    
+    $image_info = getimagesize($source_path);
+    if (!$image_info) {
+        error_log("Unable to get image info from: " . $source_path);
+        return false;
+    }
+    
+    $mime_type = $image_info['mime'];
+    $width = $image_info[0];
+    $height = $image_info[1];
+    
+    // Create image resource based on type
+    switch ($mime_type) {
+        case 'image/jpeg':
+        case 'image/jpg':
+            $source_image = imagecreatefromjpeg($source_path);
+            break;
+        case 'image/png':
+            $source_image = imagecreatefrompng($source_path);
+            break;
+        case 'image/webp':
+            $source_image = imagecreatefromwebp($source_path);
+            break;
+        default:
+            error_log("Unsupported image type: " . $mime_type);
+            return false;
+    }
+    
+    if (!$source_image) {
+        error_log("Failed to create image resource");
+        return false;
+    }
+    
+    // Calculate new dimensions while maintaining aspect ratio
+    $ratio = min($max_width / $width, $max_height / $height);
+    
+    if ($ratio < 1) {
+        $new_width = (int)($width * $ratio);
+        $new_height = (int)($height * $ratio);
+    } else {
+        $new_width = $width;
+        $new_height = $height;
+    }
+    
+    // Create new image
+    $new_image = imagecreatetruecolor($new_width, $new_height);
+    
+    // Preserve transparency for PNG
+    if ($mime_type == 'image/png') {
+        imagealphablending($new_image, false);
+        imagesavealpha($new_image, true);
+        $transparent = imagecolorallocatealpha($new_image, 255, 255, 255, 127);
+        imagefilledrectangle($new_image, 0, 0, $new_width, $new_height, $transparent);
+    }
+    
+    // Resample the image
+    imagecopyresampled($new_image, $source_image, 0, 0, 0, 0, $new_width, $new_height, $width, $height);
+    
+    // Generate unique filename
+    $webp_filename = uniqid() . '.webp';
+    $webp_path = $destination_dir . $webp_filename;
+    
+    // Save as WebP
+    $success = imagewebp($new_image, $webp_path, $quality);
+    
+    // Free memory
+    imagedestroy($source_image);
+    imagedestroy($new_image);
+    
+    // Delete temporary uploaded file
+    if (file_exists($source_path)) {
+        unlink($source_path);
+    }
+    
+    return $success ? $webp_filename : false;
+}
+
 // Handle Add Book
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_book'])) {
     $title = mysqli_real_escape_string($conn, $_POST['title']);
@@ -16,7 +101,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_book'])) {
     $category = mysqli_real_escape_string($conn, $_POST['category']);
     $description = mysqli_real_escape_string($conn, $_POST['description']);
     $price = floatval($_POST['price']);
-    $subscription_price = floatval($_POST['subscription_price']);
+    $is_subscription_allowed = isset($_POST['is_subscription_allowed']) ? 1 : 0;
     $type = mysqli_real_escape_string($conn, $_POST['type']);
     $stock = intval($_POST['stock']);
     $is_free = isset($_POST['is_free']) ? 1 : 0;
@@ -38,10 +123,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_book'])) {
         }
         $file_name = uniqid() . '_' . basename($_FILES['pdf_file']['name']);
         move_uploaded_file($_FILES['pdf_file']['tmp_name'], $book_dir . $file_name);
-        $file_path = 'uploads/books/' . $file_name; // stored relative in DB
+        $file_path = 'uploads/books/' . $file_name;
     }
 
-    // Handle book cover image upload
     $image_path = '';
     if (isset($_FILES['book_image']) && $_FILES['book_image']['error'] == 0) {
         $allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
@@ -51,20 +135,20 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_book'])) {
             header("Location: manage_books.php");
             exit();
         }
-        if ($_FILES['book_image']['size'] > 2 * 1024 * 1024) { // 2MB limit
-            $_SESSION['error_msg'] = "Image too large. Max 2MB allowed.";
+        if ($_FILES['book_image']['size'] > 5 * 1024 * 1024) { // 5MB limit
+            $_SESSION['error_msg'] = "Image too large. Max 5MB allowed.";
             header("Location: manage_books.php");
             exit();
         }
         $image_name = uniqid() . '_' . basename($_FILES['book_image']['name']);
         move_uploaded_file($_FILES['book_image']['tmp_name'], $cover_dir . $image_name);
-        $image_path = 'uploads/book_covers/' . $image_name; // relative path
+        $image_path = 'uploads/book_covers/' . $image_name; // CONSISTENT relative path
     }
 
     $query = "INSERT INTO books 
-        (title, author, category, description, price, subscription_price, type, file_path, image_path, stock, is_free)
-        VALUES 
-        ('$title', '$author', '$category', '$description', $price, $subscription_price, '$type', '$file_path', '$image_path', $stock, $is_free)";
+    (title, author, category, description, price, type, file_path, image_path, stock, is_free, is_subscription_allowed)
+    VALUES 
+    ('$title', '$author', '$category', '$description', $price, '$type', '$file_path', '$image_path', $stock, $is_free, $is_subscription_allowed)";
 
     if (mysqli_query($conn, $query)) {
         $_SESSION['success_msg'] = "Book added successfully!";
@@ -83,11 +167,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_book'])) {
     $category = mysqli_real_escape_string($conn, $_POST['category']);
     $description = mysqli_real_escape_string($conn, $_POST['description']);
     $price = floatval($_POST['price']);
-    $subscription_price = floatval($_POST['subscription_price']);
+    $is_subscription_allowed = isset($_POST['is_subscription_allowed']) ? 1 : 0;
     $type = mysqli_real_escape_string($conn, $_POST['type']);
     $stock = intval($_POST['stock']);
     $is_free = isset($_POST['is_free']) ? 1 : 0;
 
+    $book_dir = __DIR__ . '/../uploads/books/';
+    $cover_dir = __DIR__ . '/../uploads/book_covers/';
+    
     $file_path_update = "";
     $image_path_update = "";
 
@@ -113,10 +200,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_book'])) {
         $file_path_update = ", file_path='uploads/books/$file_name'";
     }
 
-    // Handle book cover image update
+    // Handle book cover image update with compression and WebP conversion
     if (isset($_FILES['book_image']) && $_FILES['book_image']['error'] == 0) {
         $allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
         $file_type = $_FILES['book_image']['type'];
+        
         if (in_array($file_type, $allowed_types)) {
             // Delete old image
             $old_image_query = "SELECT image_path FROM books WHERE book_id=$book_id";
@@ -126,9 +214,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_book'])) {
                 unlink(__DIR__ . '/../' . $old_image_data['image_path']);
             }
 
-            $image_name = uniqid() . '_' . basename($_FILES['book_image']['name']);
-            move_uploaded_file($_FILES['book_image']['tmp_name'], $cover_dir . $image_name);
-            $image_path_update = ", image_path='uploads/book_covers/$image_name'";
+            // Process and convert to WebP
+            $webp_filename = compressAndConvertToWebP($_FILES['book_image']['tmp_name'], $cover_dir, 85, 800, 1200);
+            
+            if ($webp_filename) {
+                $image_path_update = ", image_path='uploads/book_covers/$webp_filename'";
+            }
         }
     }
 
@@ -138,10 +229,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_book'])) {
         category='$category', 
         description='$description',
         price=$price, 
-        subscription_price=$subscription_price, 
         type='$type', 
         stock=$stock, 
-        is_free=$is_free
+        is_free=$is_free,
+        is_subscription_allowed=$is_subscription_allowed
         $file_path_update 
         $image_path_update
         WHERE book_id=$book_id";
@@ -159,25 +250,43 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_book'])) {
 if (isset($_GET['delete'])) {
     $book_id = intval($_GET['delete']);
 
-    // Fetch file paths
-    $file_query = "SELECT file_path, image_path FROM books WHERE book_id = $book_id";
-    $file_result = mysqli_query($conn, $file_query);
-    $file_data = mysqli_fetch_assoc($file_result);
+    // Start transaction
+    $conn->begin_transaction();
+    
+    try {
+        // Fetch file paths
+        $file_query = "SELECT file_path, image_path FROM books WHERE book_id = ?";
+        $file_stmt = $conn->prepare($file_query);
+        $file_stmt->bind_param("i", $book_id);
+        $file_stmt->execute();
+        $file_result = $file_stmt->get_result();
+        $file_data = $file_result->fetch_assoc();
+        $file_stmt->close();
 
-    // Delete from database first
-    $query = "DELETE FROM books WHERE book_id = $book_id";
-    if (mysqli_query($conn, $query)) {
+        // Delete from database first
+        $delete_stmt = $conn->prepare("DELETE FROM books WHERE book_id = ?");
+        $delete_stmt->bind_param("i", $book_id);
+        
+        if (!$delete_stmt->execute()) {
+            throw new Exception("Failed to delete book from database");
+        }
+        $delete_stmt->close();
 
-        // Base absolute path (one level up from /admin)
+        // Commit database transaction
+        $conn->commit();
+
+        // Now try to delete files (non-critical if fails)
         $base_path = realpath(__DIR__ . '/..') . '/';
 
         // Delete PDF file
         if (!empty($file_data['file_path'])) {
             $pdf_full = $base_path . $file_data['file_path'];
             if (file_exists($pdf_full)) {
-                unlink($pdf_full);
-            } else {
-                error_log("PDF not found: " . $pdf_full);
+                try {
+                    unlink($pdf_full);
+                } catch (Exception $e) {
+                    error_log("Failed to delete PDF: " . $pdf_full . " - " . $e->getMessage());
+                }
             }
         }
 
@@ -185,15 +294,20 @@ if (isset($_GET['delete'])) {
         if (!empty($file_data['image_path'])) {
             $img_full = $base_path . $file_data['image_path'];
             if (file_exists($img_full)) {
-                unlink($img_full);
-            } else {
-                error_log("Image not found: " . $img_full);
+                try {
+                    unlink($img_full);
+                } catch (Exception $e) {
+                    error_log("Failed to delete image: " . $img_full . " - " . $e->getMessage());
+                }
             }
         }
 
         $_SESSION['success_msg'] = "Book deleted successfully!";
-    } else {
-        $_SESSION['error_msg'] = "Error deleting book: " . mysqli_error($conn);
+        
+    } catch (Exception $e) {
+        $conn->rollback();
+        $_SESSION['error_msg'] = "Error deleting book: " . $e->getMessage();
+        error_log("Book deletion error: " . $e->getMessage());
     }
 
     header("Location: manage_books.php");
@@ -235,7 +349,7 @@ if (isset($_GET['edit'])) {
     $edit_book = mysqli_fetch_assoc($edit_result);
 }
 
-include '../includes/header.php';
+include '../includes/admin_header.php';
 ?>
 
 <div class="admin-wrapper">
@@ -260,23 +374,21 @@ include '../includes/header.php';
         </header>
         
         <div class="admin-content">
-            <?php if (isset($_SESSION['success_msg'])): ?>
+            <?php if (!empty($success_msg)): ?>
                 <div class="alert alert-success">
-                    <i class="bi bi-check-circle"></i> <?php echo $_SESSION['success_msg']; ?>
+                    <i class="bi bi-check-circle"></i> <?php echo $success_msg; ?>
                 </div>
-                <?php unset($_SESSION['success_msg']); ?>
             <?php endif; ?>
-
-            <?php if (isset($_SESSION['error_msg'])): ?>
+            
+            <?php if (!empty($error_msg)): ?>
                 <div class="alert alert-danger">
-                    <i class="bi bi-exclamation-triangle"></i> <?php echo $_SESSION['error_msg']; ?>
+                    <i class="bi bi-exclamation-triangle"></i> <?php echo $error_msg; ?>
                 </div>
-                <?php unset($_SESSION['error_msg']); ?>
             <?php endif; ?>
             
             <!-- Page Header -->
             <div class="page-header-admin">
-                <h1><i class="bi bi-book-fill"></i> Books Management</h1>
+                <h1><i class="bi bi-book"></i> Books Management</h1>
                 <div class="header-actions">
                     <button class="btn-filter" onclick="toggleAddForm()">
                         <i class="bi bi-plus-circle"></i> Add New Book
@@ -339,12 +451,6 @@ include '../includes/header.php';
                             </div>
                             
                             <div class="form-group">
-                                <label class="form-label">Subscription Price ($)</label>
-                                <input type="number" step="0.01" name="subscription_price" class="form-input" 
-                                       value="<?php echo $edit_book ? $edit_book['subscription_price'] : ''; ?>">
-                            </div>
-                            
-                            <div class="form-group">
                                 <label class="form-label">Stock *</label>
                                 <input type="number" name="stock" class="form-input" 
                                        value="<?php echo $edit_book ? $edit_book['stock'] : ''; ?>" required>
@@ -356,13 +462,13 @@ include '../includes/header.php';
                                 <?php if ($edit_book && $edit_book['image_path']): ?>
                                     <div class="mt-2">
                                         <small class="text-muted">Current image:</small>
-                                        <img src="<?php echo htmlspecialchars($edit_book['image_path']); ?>" 
+                                        <img src="../<?php echo htmlspecialchars($edit_book['image_path']); ?>" 
                                              alt="Current book cover" 
                                              style="max-width: 150px; display: block; margin-top: 8px; border-radius: 4px; border: 1px solid #ddd;">
                                     </div>
                                 <?php endif; ?>
                                 <div id="imagePreview" style="margin-top: 10px;"></div>
-                                <small class="text-muted">Accepted formats: JPG, PNG, WEBP (Max 5MB)</small>
+                                <small class="text-muted">Accepted formats: JPG, PNG, WEBP (Max 10MB) - Will be automatically compressed & converted to WebP</small>
                             </div>
                             
                             <div class="form-group">
@@ -385,6 +491,15 @@ include '../includes/header.php';
                                        <?php echo ($edit_book && $edit_book['is_free']) ? 'checked' : ''; ?>>
                                 <span>Make this book free</span>
                             </label>
+                        </div>
+
+                        <div class="form-check-group">
+                            <label class="form-check-label">
+                                <input type="checkbox" name="is_subscription_allowed" class="form-check-input" 
+                                    <?php echo ($edit_book && $edit_book['is_subscription_allowed']) ? 'checked' : ''; ?>>
+                                <span><i class="bi bi-star-fill"></i> Allow this book in subscription plan</span>
+                            </label>
+                            <small class="text-muted">Enable this to make the book available for subscribed users</small>
                         </div>
                         
                         <div class="form-actions">
@@ -530,9 +645,9 @@ function previewImage(event) {
     const file = event.target.files[0];
     
     if (file) {
-        // Validate file size (5MB max)
-        if (file.size > 5 * 1024 * 1024) {
-            alert('File size must be less than 5MB');
+        // Validate file size (10MB max before compression)
+        if (file.size > 10 * 1024 * 1024) {
+            alert('File size must be less than 10MB');
             event.target.value = '';
             preview.innerHTML = '';
             return;
@@ -542,7 +657,7 @@ function previewImage(event) {
         reader.onload = function(e) {
             preview.innerHTML = `
                 <div style="margin-top: 10px;">
-                    <p style="margin-bottom: 5px; font-size: 14px; color: #666;">Preview:</p>
+                    <p style="margin-bottom: 5px; font-size: 14px; color: #666;">Preview (will be compressed & converted to WebP):</p>
                     <img src="${e.target.result}" 
                          alt="Preview" 
                          style="max-width: 200px; border-radius: 4px; border: 1px solid #ddd;">
@@ -556,4 +671,4 @@ function previewImage(event) {
 }
 </script>
 
-<?php include '../includes/footer.php'; ?>
+<?php include '../includes/admin_footer.php'; ?>

@@ -110,7 +110,7 @@ if (isset($_GET['edit'])) {
     $edit_competition = mysqli_fetch_assoc($edit_result);
 }
 
-include '../includes/header.php';
+include '../includes/admin_header.php';
 ?>
 
 <div class="admin-wrapper">
@@ -375,4 +375,4 @@ function toggleAddForm() {
 }
 </script>
 
-<?php include '../includes/footer.php'; ?>
+<?php include '../includes/admin_footer.php'; ?>

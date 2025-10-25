@@ -1,117 +1,117 @@
 <?php
 $page_title = "About Us";
-
+require_once 'config/db.php';
 include 'includes/header.php';
+
+// Fetch dynamic counts
+$stats = [
+    'books' => 0,
+    'users' => 0,
+    'competitions' => 0,
+    'downloads' => 0
+];
+
+$result = $conn->query("SELECT COUNT(*) AS total FROM books");
+$stats['books'] = $result->fetch_assoc()['total'] ?? 0;
+
+$result = $conn->query("SELECT COUNT(*) AS total FROM users");
+$stats['users'] = $result->fetch_assoc()['total'] ?? 0;
+
+$result = $conn->query("SELECT COUNT(*) AS total FROM competitions");
+$stats['competitions'] = $result->fetch_assoc()['total'] ?? 0;
+
+$result = $conn->query("SELECT COUNT(*) AS total FROM download_logs");
+$stats['downloads'] = $result->fetch_assoc()['total'] ?? 0;
 ?>
 
-    <!-- Page Header -->
-    <section class="page-header">
-        <div class="container">
-            <div class="row">
-                <div class="col-12 text-center">
-                    <h1 class="display-4 fw-bold text-white mb-3">About Our Platform</h1>
-                    <p class="lead text-white opacity-90">Empowering readers and writers through digital innovation</p>
-                    <nav aria-label="breadcrumb">
-                        <ol class="breadcrumb justify-content-center">
-                            <li class="breadcrumb-item"><a href="index.php">Home</a></li>
-                            <li class="breadcrumb-item active" aria-current="page">About</li>
-                        </ol>
-                    </nav>
-                </div>
+<!-- Page Header -->
+<section class="page-header">
+    <div class="container">
+        <div class="row">
+            <div class="col-12 text-center">
+                <h1 class="display-4 fw-bold text-white mb-3">About Our Platform</h1>
+                <p class="lead text-white opacity-90">Empowering readers and writers through digital innovation</p>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb justify-content-center">
+                        <li class="breadcrumb-item"><a href="index.php">Home</a></li>
+                        <li class="breadcrumb-item active" aria-current="page">About</li>
+                    </ol>
+                </nav>
             </div>
         </div>
-    </section>
+    </div>
+</section>
 
-    <!-- Mission Section -->
-    <section class="about-mission py-5 bg-white">
-        <div class="container">
-            <div class="row align-items-center">
-                <div class="col-lg-6 mb-4 mb-lg-0">
-                    <div class="about-image-wrapper">
-                        <img src="assets/images/about-mission.webp" alt="Our Mission" class="img-fluid rounded-3">
-                        <div class="image-badge">
-                            <i class="bi bi-rocket-takeoff"></i>
-                            <span>Our Mission</span>
-                        </div>
+<!-- Mission Section -->
+<section class="about-mission py-5 bg-white">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6 mb-4 mb-lg-0">
+                <div class="about-image-wrapper">
+                    <img src="assets/images/about-mission.webp" alt="Our Mission" class="img-fluid rounded-3">
+                    <div class="image-badge">
+                        <i class="bi bi-rocket-takeoff"></i>
+                        <span>Our Mission</span>
                     </div>
                 </div>
-                <div class="col-lg-6">
-                    <div class="content-block">
-                        <span class="section-label">Our Purpose</span>
-                        <h2 class="section-title mb-4">Revolutionizing Digital Reading & Learning</h2>
-                        <p class="text-muted mb-3">
-                            At Online E-Book System, we're on a mission to democratize access to quality educational content and create a thriving community of readers and writers. We believe that knowledge should be accessible to everyone, everywhere.
-                        </p>
-                        <p class="text-muted mb-4">
-                            Our platform combines cutting-edge technology with a user-friendly interface to deliver an unparalleled digital reading experience. Whether you're a student, professional, or lifelong learner, we have something for everyone.
-                        </p>
-                        <div class="feature-list">
-                            <div class="feature-item">
-                                <i class="bi bi-check-circle-fill text-primary"></i>
-                                <span>Access to 500+ premium e-books</span>
-                            </div>
-                            <div class="feature-item">
-                                <i class="bi bi-check-circle-fill text-primary"></i>
-                                <span>Interactive writing competitions</span>
-                            </div>
-                            <div class="feature-item">
-                                <i class="bi bi-check-circle-fill text-primary"></i>
-                                <span>Community-driven learning</span>
-                            </div>
-                            <div class="feature-item">
-                                <i class="bi bi-check-circle-fill text-primary"></i>
-                                <span>Multi-format book support</span>
-                            </div>
-                        </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="content-block">
+                    <span class="section-label">Our Purpose</span>
+                    <h2 class="section-title mb-4">Revolutionizing Digital Reading & Learning</h2>
+                    <p class="text-muted mb-3">
+                        At Online E-Book System, we're on a mission to democratize access to quality educational content and create a thriving community of readers and writers.
+                    </p>
+                    <p class="text-muted mb-4">
+                        Our platform combines cutting-edge technology with a user-friendly interface to deliver an unparalleled digital reading experience.
+                    </p>
+                    <div class="feature-list">
+                        <div class="feature-item"><i class="bi bi-check-circle-fill text-primary"></i><span>Access to hundreds of premium e-books</span></div>
+                        <div class="feature-item"><i class="bi bi-check-circle-fill text-primary"></i><span>Interactive writing competitions</span></div>
+                        <div class="feature-item"><i class="bi bi-check-circle-fill text-primary"></i><span>Community-driven learning</span></div>
+                        <div class="feature-item"><i class="bi bi-check-circle-fill text-primary"></i><span>Multi-format book support</span></div>
                     </div>
                 </div>
             </div>
         </div>
-    </section>
+    </div>
+</section>
 
-    <!-- Stats Section -->
-    <section class="about-stats py-5">
-        <div class="container">
-            <div class="row text-center">
-                <div class="col-lg-3 col-md-6 mb-4 mb-lg-0">
-                    <div class="stat-card">
-                        <div class="stat-icon">
-                            <i class="bi bi-book"></i>
-                        </div>
-                        <h3 class="stat-number" data-count="500">0</h3>
-                        <p class="stat-label">Books Available</p>
-                    </div>
+<!-- Stats Section -->
+<section class="about-stats py-5">
+    <div class="container">
+        <div class="row text-center">
+            <div class="col-lg-3 col-md-6 mb-4 mb-lg-0">
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="bi bi-book"></i></div>
+                    <h3 class="stat-number" data-count="<?php echo $stats['books']; ?>">0</h3>
+                    <p class="stat-label">Books Available</p>
                 </div>
-                <div class="col-lg-3 col-md-6 mb-4 mb-lg-0">
-                    <div class="stat-card">
-                        <div class="stat-icon">
-                            <i class="bi bi-people"></i>
-                        </div>
-                        <h3 class="stat-number" data-count="1000">0</h3>
-                        <p class="stat-label">Active Users</p>
-                    </div>
+            </div>
+            <div class="col-lg-3 col-md-6 mb-4 mb-lg-0">
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="bi bi-person"></i></div>
+                    <h3 class="stat-number" data-count="<?php echo $stats['users']; ?>">0</h3>
+                    <p class="stat-label">Active Users</p>
                 </div>
-                <div class="col-lg-3 col-md-6 mb-4 mb-lg-0">
-                    <div class="stat-card">
-                        <div class="stat-icon">
-                            <i class="bi bi-trophy"></i>
-                        </div>
-                        <h3 class="stat-number" data-count="50">0</h3>
-                        <p class="stat-label">Competitions</p>
-                    </div>
+            </div>
+            <div class="col-lg-3 col-md-6 mb-4 mb-lg-0">
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="bi bi-trophy"></i></div>
+                    <h3 class="stat-number" data-count="<?php echo $stats['competitions']; ?>">0</h3>
+                    <p class="stat-label">Competitions</p>
                 </div>
-                <div class="col-lg-3 col-md-6">
-                    <div class="stat-card">
-                        <div class="stat-icon">
-                            <i class="bi bi-download"></i>
-                        </div>
-                        <h3 class="stat-number" data-count="5000">0</h3>
-                        <p class="stat-label">Downloads</p>
-                    </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="bi bi-download"></i></div>
+                    <h3 class="stat-number" data-count="<?php echo $stats['downloads']; ?>">0</h3>
+                    <p class="stat-label">Downloads</p>
                 </div>
             </div>
         </div>
-    </section>
+    </div>
+</section>
 
     <!-- Values Section -->
     <section class="about-values py-5 bg-white">
@@ -258,48 +258,42 @@ include 'includes/header.php';
 
     <!-- Counter Animation Script -->
     <script>
-        function animateCounter(element) {
-            const target = parseInt(element.getAttribute('data-count'));
-            const duration = 2000;
-            const increment = target / (duration / 16);
-            let current = 0;
-            
-            const timer = setInterval(() => {
-                current += increment;
-                if (current >= target) {
-                    element.textContent = target + '+';
-                    clearInterval(timer);
-                } else {
-                    element.textContent = Math.floor(current) + '+';
-                }
-            }, 16);
+function animateCounter(element) {
+    const target = parseInt(element.getAttribute('data-count')) || 0;
+    const duration = 2000;
+    const increment = target / (duration / 16);
+    let current = 0;
+    
+    const timer = setInterval(() => {
+        current += increment;
+        if (current >= target) {
+            element.textContent = target + '+';
+            clearInterval(timer);
+        } else {
+            element.textContent = Math.floor(current) + '+';
         }
+    }, 16);
+}
 
-        const observerOptions = {
-            threshold: 0.5,
-            rootMargin: '0px'
-        };
+const observerOptions = {
+    threshold: 0.5,
+    rootMargin: '0px'
+};
 
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    const counters = entry.target.querySelectorAll('.stat-number');
-                    counters.forEach(counter => {
-                        if (counter.textContent === '0') {
-                            animateCounter(counter);
-                        }
-                    });
-                    observer.unobserve(entry.target);
-                }
+const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+        if (entry.isIntersecting) {
+            const counters = entry.target.querySelectorAll('.stat-number');
+            counters.forEach(counter => {
+                if (counter.textContent === '0') animateCounter(counter);
             });
-        }, observerOptions);
-
-        const statsSection = document.querySelector('.about-stats');
-        if (statsSection) {
-            observer.observe(statsSection);
+            observer.unobserve(entry.target);
         }
-    </script>
+    });
+}, observerOptions);
 
-<?php
-include 'includes/footer.php';
-?>
+const statsSection = document.querySelector('.about-stats');
+if (statsSection) observer.observe(statsSection);
+</script>
+
+<?php include 'includes/footer.php'; ?>

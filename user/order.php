@@ -36,8 +36,77 @@ $user_result = $user_stmt->get_result();
 $user = $user_result->fetch_assoc();
 $user_stmt->close();
 
-$page_title = "Place Order";
+// Check if user already purchased this book
+$check_purchase = $conn->prepare("
+    SELECT o.order_id, p.payment_status 
+    FROM orders o
+    LEFT JOIN payments p ON o.order_id = p.order_id
+    WHERE o.user_id = ? AND o.book_id = ?
+    ORDER BY o.order_date DESC
+    LIMIT 1
+");
+$check_purchase->bind_param("ii", $user_id, $book_id);
+$check_purchase->execute();
+$existing_order = $check_purchase->get_result()->fetch_assoc();
+$check_purchase->close();
 
+if ($existing_order && $existing_order['payment_status'] === 'completed') {
+    $_SESSION['info_message'] = "You have already purchased this book!";
+    header("Location: book_details.php?id=" . $book_id);
+    exit();
+}
+
+// Check for active subscription
+$check_subscription = $conn->prepare("
+    SELECT subscription_id, end_date 
+    FROM subscriptions 
+    WHERE user_id = ? 
+    AND status = 'active' 
+    AND end_date > NOW()
+    ORDER BY end_date DESC
+    LIMIT 1
+");
+$check_subscription->bind_param("i", $user_id);
+$check_subscription->execute();
+$active_subscription = $check_subscription->get_result()->fetch_assoc();
+$check_subscription->close();
+
+// If user has active subscription and book allows subscription access
+if ($active_subscription && $book['is_subscription_allowed']) {
+    // Check if user already has access
+    $check_access = $conn->prepare("
+        SELECT access_id 
+        FROM subscription_access 
+        WHERE subscription_id = ? AND book_id = ?
+        LIMIT 1
+    ");
+    $check_access->bind_param("ii", $active_subscription['subscription_id'], $book_id);
+    $check_access->execute();
+    $has_access = $check_access->get_result()->num_rows > 0;
+    $check_access->close();
+    
+    if ($has_access) {
+        $_SESSION['info_message'] = "You already have access to this book through your active subscription!";
+        header("Location: book_details.php?id=" . $book_id);
+        exit();
+    } else {
+        // Grant access
+        $grant_access = $conn->prepare("
+            INSERT INTO subscription_access (subscription_id, book_id, granted_at) 
+            VALUES (?, ?, NOW())
+        ");
+        $grant_access->bind_param("ii", $active_subscription['subscription_id'], $book_id);
+        
+        if ($grant_access->execute()) {
+            $_SESSION['success_message'] = "Book added to your library via your active subscription!";
+            header("Location: book_details.php?id=" . $book_id);
+            exit();
+        }
+        $grant_access->close();
+    }
+}
+
+$page_title = "Place Order";
 include '../includes/header.php';
 
 $error_message = '';
@@ -47,60 +116,128 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $quantity = intval($_POST['quantity'] ?? 1);
     $order_type = $_POST['order_type'] ?? $book['type'];
     $payment_method = $_POST['payment_method'] ?? '';
-    $shipping_address = trim($_POST['shipping_address'] ?? $user['address']);
+    $shipping_address = trim($_POST['shipping_address'] ?? '');
     
+    // Validation
     if ($quantity < 1) {
         $error_message = 'Please enter a valid quantity.';
     } elseif ($quantity > $book['stock']) {
-        $error_message = 'Requested quantity exceeds available stock.';
+        $error_message = 'Not enough stock available. Only ' . $book['stock'] . ' items in stock.';
     } elseif (empty($payment_method)) {
         $error_message = 'Please select a payment method.';
     } elseif (in_array($order_type, ['cd', 'hardcopy']) && empty($shipping_address)) {
         $error_message = 'Shipping address is required for physical items.';
     } else {
-        $unit_price = $book['is_free'] ? 0 : $book['price'];
-        $total_amount = $unit_price * $quantity;
+        $conn->begin_transaction();
         
-        $shipping_cost = 0;
-        if (in_array($order_type, ['cd', 'hardcopy'])) {
-            $shipping_cost = 5.99 * $quantity;
-            $total_amount += $shipping_cost;
-        }
-        
-        $order_stmt = $conn->prepare("INSERT INTO orders (user_id, book_id, quantity, order_type, total_amount, status, order_date) VALUES (?, ?, ?, ?, ?, 'pending', NOW())");
-        $order_stmt->bind_param("iiisd", $user_id, $book_id, $quantity, $order_type, $total_amount);
-        
-        if ($order_stmt->execute()) {
+        try {
+            // Check stock again within transaction
+            $stock_check = $conn->prepare("SELECT stock FROM books WHERE book_id = ? FOR UPDATE");
+            $stock_check->bind_param("i", $book_id);
+            $stock_check->execute();
+            $stock_result = $stock_check->get_result();
+            $current_stock = $stock_result->fetch_assoc()['stock'];
+            $stock_check->close();
+            
+            if ($current_stock < $quantity) {
+                throw new Exception('Insufficient stock. Only ' . $current_stock . ' items available.');
+            }
+            
+            // Calculate amounts
+            $unit_price = $book['is_free'] ? 0 : floatval($book['price']);
+            $total_amount = $unit_price * $quantity;
+            
+            $shipping_cost = 0;
+            if (in_array($order_type, ['cd', 'hardcopy'])) {
+                $shipping_cost = 5.99 * $quantity;
+                $total_amount += $shipping_cost;
+            }
+            
+            // Create order
+            $order_stmt = $conn->prepare("
+                INSERT INTO orders (user_id, book_id, quantity, order_type, total_amount, status, order_date, shipping_address) 
+                VALUES (?, ?, ?, ?, ?, 'pending', NOW(), ?)
+            ");
+            $order_stmt->bind_param("iiisds", $user_id, $book_id, $quantity, $order_type, $total_amount, $shipping_address);
+            
+            if (!$order_stmt->execute()) {
+                throw new Exception('Failed to create order: ' . $order_stmt->error);
+            }
+            
             $order_id = $order_stmt->insert_id;
             $order_stmt->close();
             
+            // Create payment record
             $payment_status = $book['is_free'] ? 'completed' : 'pending';
-            $payment_stmt = $conn->prepare("INSERT INTO payments (order_id, payment_method, amount, payment_status, payment_date) VALUES (?, ?, ?, ?, NOW())");
+            $payment_stmt = $conn->prepare("
+                INSERT INTO payments (order_id, payment_method, amount, payment_status, payment_date) 
+                VALUES (?, ?, ?, ?, NOW())
+            ");
             $payment_stmt->bind_param("isds", $order_id, $payment_method, $total_amount, $payment_status);
-            $payment_stmt->execute();
+            
+            if (!$payment_stmt->execute()) {
+                throw new Exception('Failed to process payment: ' . $payment_stmt->error);
+            }
             $payment_stmt->close();
             
+            // Update stock
             $update_stock = $conn->prepare("UPDATE books SET stock = stock - ? WHERE book_id = ?");
             $update_stock->bind_param("ii", $quantity, $book_id);
-            $update_stock->execute();
+            
+            if (!$update_stock->execute()) {
+                throw new Exception('Failed to update stock: ' . $update_stock->error);
+            }
             $update_stock->close();
             
-            $success_message = 'Order placed successfully! Order ID: #' . $order_id;
+            // If free book, mark as paid
+            if ($book['is_free']) {
+                $update_order = $conn->prepare("UPDATE orders SET status = 'paid' WHERE order_id = ?");
+                $update_order->bind_param("i", $order_id);
+                $update_order->execute();
+                $update_order->close();
+            }
             
-            $stmt = $conn->prepare("SELECT * FROM books WHERE book_id = ?");
-            $stmt->bind_param("i", $book_id);
-            $stmt->execute();
-            $result = $stmt->get_result();
-            $book = $result->fetch_assoc();
-            $stmt->close();
-        } else {
-            $error_message = 'Failed to place order. Please try again.';
+            $conn->commit();
+            
+            // Store success message in session
+            $_SESSION['order_success'] = true;
+            $_SESSION['order_id'] = $order_id;
+            $_SESSION['order_amount'] = $total_amount;
+            $_SESSION['is_free'] = $book['is_free'];
+            
+            // Redirect to payment processing or success page
+            if ($book['is_free']) {
+                $_SESSION['payment_success'] = "Your order has been placed successfully! You can now access your book.";
+                header("Location: book_details.php?id=" . $book_id);
+            } else {
+                header("Location: payment_process.php?order_id=" . $order_id . "&method=" . urlencode($payment_method));
+            }
+            exit();
+            
+        } catch (Exception $e) {
+            $conn->rollback();
+            $error_message = $e->getMessage();
         }
     }
 }
+
+function getBookImage($book) {
+    $paths = [
+        '../' . $book['image_path'],
+        $book['image_path'],
+        '../uploads/book_covers/' . basename($book['image_path'])
+    ];
+    
+    foreach ($paths as $path) {
+        if (!empty($book['image_path']) && file_exists($path)) {
+            return $path;
+        }
+    }
+    
+    return '../assets/images/books/default.jpg';
+}
 ?>
 
-<!-- Page Header -->
 <section class="page-header">
     <div class="container">
         <div class="row">
@@ -119,47 +256,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
 </section>
 
-<!-- Order Section -->
 <section class="order-section py-5">
     <div class="container">
-        <?php if ($success_message): ?>
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <i class="bi bi-check-circle me-2"></i><?php echo $success_message; ?>
+        <?php if ($error_message): ?>
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle me-2"></i><?php echo htmlspecialchars($error_message); ?>
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-        <div class="text-center mb-4">
-            <a href="profile.php" class="btn btn-primary me-2">
-                <i class="bi bi-person me-2"></i>View My Orders
-            </a>
-            <a href="books.php" class="btn btn-outline-primary">
-                <i class="bi bi-arrow-left me-2"></i>Continue Shopping
-            </a>
         </div>
         <?php endif; ?>
 
-        <?php if ($error_message): ?>
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <i class="bi bi-exclamation-triangle me-2"></i><?php echo $error_message; ?>
+        <?php if (isset($_SESSION['info_message'])): ?>
+        <div class="alert alert-info alert-dismissible fade show" role="alert">
+            <i class="bi bi-info-circle me-2"></i><?php echo htmlspecialchars($_SESSION['info_message']); ?>
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
+        <?php unset($_SESSION['info_message']); ?>
         <?php endif; ?>
 
         <div class="row">
-            <!-- Order Form -->
             <div class="col-lg-8 mb-4">
                 <div class="order-card">
                     <h4 class="order-card-title">
                         <i class="bi bi-cart-check me-2"></i>Order Details
                     </h4>
                     
-                    <form method="POST" action="" class="order-form needs-validation" novalidate>
-                        <!-- Book Information -->
+                    <form method="POST" action="" class="order-form needs-validation" novalidate id="orderForm">
                         <div class="book-info-section mb-4">
                             <div class="row align-items-center">
                                 <div class="col-md-3">
-                                    <img src="../assets/images/books/default.jpg" 
+                                    <img src="<?php echo getBookImage($book); ?>" 
                                          alt="<?php echo htmlspecialchars($book['title']); ?>" 
-                                         class="img-fluid rounded">
+                                         class="img-fluid rounded"
+                                         onerror="this.src='../assets/images/books/default.jpg'">
                                 </div>
                                 <div class="col-md-9">
                                     <span class="book-category-badge"><?php echo htmlspecialchars($book['category']); ?></span>
@@ -181,13 +309,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                         <hr class="my-4">
 
-                        <!-- Order Type -->
                         <div class="form-section mb-4">
                             <h6 class="form-section-title">Select Format</h6>
                             <div class="order-type-options">
                                 <label class="order-type-option">
-                                    <input type="radio" name="order_type" value="pdf" 
-                                           <?php echo $book['type'] === 'pdf' ? 'checked' : ''; ?> required>
+                                    <input type="radio" name="order_type" value="pdf" <?php echo ($book['type'] === 'pdf') ? 'checked' : ''; ?> required>
                                     <div class="option-content">
                                         <i class="bi bi-file-pdf"></i>
                                         <span class="option-label">PDF Download</span>
@@ -196,8 +322,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 </label>
                                 
                                 <label class="order-type-option">
-                                    <input type="radio" name="order_type" value="cd" 
-                                           <?php echo $book['type'] === 'cd' ? 'checked' : ''; ?>>
+                                    <input type="radio" name="order_type" value="cd" <?php echo ($book['type'] === 'cd') ? 'checked' : ''; ?>>
                                     <div class="option-content">
                                         <i class="bi bi-disc"></i>
                                         <span class="option-label">CD</span>
@@ -206,8 +331,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 </label>
                                 
                                 <label class="order-type-option">
-                                    <input type="radio" name="order_type" value="hardcopy" 
-                                           <?php echo $book['type'] === 'hardcopy' ? 'checked' : ''; ?>>
+                                    <input type="radio" name="order_type" value="hardcopy" <?php echo ($book['type'] === 'hardcopy') ? 'checked' : ''; ?>>
                                     <div class="option-content">
                                         <i class="bi bi-book"></i>
                                         <span class="option-label">Hard Copy</span>
@@ -217,7 +341,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             </div>
                         </div>
 
-                        <!-- Quantity -->
                         <div class="form-section mb-4">
                             <h6 class="form-section-title">Quantity</h6>
                             <div class="quantity-selector">
@@ -232,20 +355,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             </div>
                         </div>
 
-                        <!-- Shipping Address -->
-                        <div class="form-section mb-4" id="shippingSection">
+                        <div class="form-section mb-4" id="shippingSection" style="display: none;">
                             <h6 class="form-section-title">Shipping Address</h6>
-                            <textarea name="shipping_address" class="form-control" rows="3" 
-                                      placeholder="Enter your complete shipping address"><?php echo htmlspecialchars($user['address']); ?></textarea>
+                            <textarea name="shipping_address" id="shippingAddress" class="form-control" rows="3" 
+                                      placeholder="Enter your complete shipping address"><?php echo htmlspecialchars($user['address'] ?? ''); ?></textarea>
                             <small class="text-muted">Required for CD and Hard Copy orders</small>
                         </div>
 
-                        <!-- Payment Method -->
                         <div class="form-section mb-4">
                             <h6 class="form-section-title">Payment Method</h6>
                             <div class="payment-methods">
                                 <label class="payment-method">
-                                    <input type="radio" name="payment_method" value="credit_card" required>
+                                    <input type="radio" name="payment_method" value="credit_card" checked required>
                                     <div class="payment-content">
                                         <i class="bi bi-credit-card"></i>
                                         <span>Credit Card</span>
@@ -278,16 +399,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             </div>
                         </div>
 
-                        <button type="submit" class="btn btn-primary btn-lg w-100">
-                            <i class="bi bi-check-circle me-2"></i>Place Order
+                        <button type="submit" class="btn btn-primary btn-lg w-100" id="submitBtn">
+                            <i class="bi bi-check-circle me-2"></i>
+                            <span id="btnText"><?php echo $book['is_free'] ? 'Complete Order' : 'Proceed to Payment'; ?></span>
                         </button>
                     </form>
                 </div>
             </div>
 
-            <!-- Order Summary -->
             <div class="col-lg-4">
-                <div class="order-summary">
+                <div class="order-summary mb-4">
                     <h5 class="summary-title">Order Summary</h5>
                     
                     <div class="summary-item">
@@ -323,6 +444,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                 </div>
 
+                <?php if ($book['is_subscription_allowed'] && !$active_subscription): ?>
+                <div class="subscription-card">
+                    <div class="subscription-offer">
+                        <div class="subscription-icon">
+                            <i class="bi bi-star-fill"></i>
+                        </div>
+                        <h5>Get Unlimited Access</h5>
+                        <p class="subscription-desc">Subscribe now and access this book plus all subscription-eligible titles</p>
+                        <div class="subscription-price">
+                            <span class="price-amount">$9.99</span>
+                            <span class="price-period">/month</span>
+                        </div>
+                        <ul class="subscription-features">
+                            <li><i class="bi bi-check-circle-fill"></i> Unlimited book access</li>
+                            <li><i class="bi bi-check-circle-fill"></i> New releases included</li>
+                            <li><i class="bi bi-check-circle-fill"></i> Cancel anytime</li>
+                        </ul>
+                        <a href="subscription.php" class="btn btn-subscription w-100">
+                            <i class="bi bi-star me-2"></i>Subscribe Now
+                        </a>
+                    </div>
+                </div>
+                <?php endif; ?>
+
                 <div class="features-box mt-4">
                     <div class="feature-item">
                         <i class="bi bi-shield-check"></i>
@@ -354,6 +499,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <script>
 const bookPrice = <?php echo $book['is_free'] ? 0 : $book['price']; ?>;
 const maxStock = <?php echo $book['stock']; ?>;
+const isFree = <?php echo $book['is_free'] ? 'true' : 'false'; ?>;
 
 function updateSummary() {
     const qty = parseInt(document.getElementById('quantity').value) || 1;
@@ -370,13 +516,23 @@ function updateSummary() {
     
     const shippingRow = document.getElementById('shippingCostRow');
     const shippingSection = document.getElementById('shippingSection');
+    const shippingAddress = document.getElementById('shippingAddress');
     
     if (orderType === 'pdf') {
         shippingRow.style.display = 'none';
         shippingSection.style.display = 'none';
+        shippingAddress.removeAttribute('required');
     } else {
         shippingRow.style.display = 'flex';
         shippingSection.style.display = 'block';
+        shippingAddress.setAttribute('required', 'required');
+    }
+    
+    const btnText = document.getElementById('btnText');
+    if (isFree) {
+        btnText.textContent = 'Complete Order';
+    } else {
+        btnText.textContent = 'Proceed to Payment';
     }
 }
 
@@ -396,11 +552,17 @@ function decreaseQty() {
     }
 }
 
-document.getElementById('quantity').addEventListener('input', updateSummary);
+document.getElementById('quantity').addEventListener('input', function() {
+    if (this.value > maxStock) this.value = maxStock;
+    if (this.value < 1) this.value = 1;
+    updateSummary();
+});
+
 document.querySelectorAll('input[name="order_type"]').forEach(radio => {
     radio.addEventListener('change', updateSummary);
 });
 
+// Form validation
 (function () {
     'use strict'
     var forms = document.querySelectorAll('.needs-validation')
@@ -414,8 +576,9 @@ document.querySelectorAll('input[name="order_type"]').forEach(radio => {
         }, false)
     })
 })()
+
+// Initialize
+updateSummary();
 </script>
 
-<?php
-include '../includes/footer.php';
-?>
+<?php include '../includes/footer.php'; ?>

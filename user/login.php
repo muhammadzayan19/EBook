@@ -78,13 +78,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $remembered_email = $_COOKIE['remember_user'] ?? '';
 ?>
 
-    <!-- Login Section -->
     <section class="auth-section">
         <div class="container">
             <div class="row justify-content-center">
                 <div class="col-lg-5 col-md-7">
                     <div class="auth-card">
-                        <!-- Logo/Brand -->
                         <div class="auth-header">
                             <div class="auth-logo">
                                 <i class="bi bi-book-half"></i>
@@ -93,7 +91,6 @@ $remembered_email = $_COOKIE['remember_user'] ?? '';
                             <p class="auth-subtitle">Login to access your account</p>
                         </div>
 
-                        <!-- Success Message -->
                         <?php if ($success_message): ?>
                         <div class="alert alert-success alert-dismissible fade show" role="alert">
                             <i class="bi bi-check-circle me-2"></i><?php echo htmlspecialchars($success_message); ?>
@@ -101,7 +98,6 @@ $remembered_email = $_COOKIE['remember_user'] ?? '';
                         </div>
                         <?php endif; ?>
 
-                        <!-- Error Message -->
                         <?php if ($error_message): ?>
                         <div class="alert alert-danger alert-dismissible fade show" role="alert">
                             <i class="bi bi-exclamation-triangle me-2"></i><?php echo htmlspecialchars($error_message); ?>
@@ -109,7 +105,6 @@ $remembered_email = $_COOKIE['remember_user'] ?? '';
                         </div>
                         <?php endif; ?>
 
-                        <!-- Login Form -->
                         <form method="POST" action="" class="auth-form needs-validation" novalidate>
                             <div class="mb-4">
                                 <div class="form-floating">
@@ -161,7 +156,6 @@ $remembered_email = $_COOKIE['remember_user'] ?? '';
                         </form>
                     </div>
 
-                    <!-- Additional Links -->
                     <div class="text-center mt-4">
                         <p class="text-muted">
                             <i class="bi bi-shield-check me-1"></i>
@@ -173,7 +167,6 @@ $remembered_email = $_COOKIE['remember_user'] ?? '';
         </div>
     </section>
 
-    <!-- Password Toggle Script -->
     <script>
         function togglePassword() {
             const passwordField = document.getElementById('password');

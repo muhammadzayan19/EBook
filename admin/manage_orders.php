@@ -136,7 +136,7 @@ if (isset($_GET['edit'])) {
     $edit_order = mysqli_fetch_assoc($edit_result);
 }
 
-include '../includes/header.php';
+include '../includes/admin_header.php';
 ?>
 
 <div class="admin-wrapper">
@@ -178,7 +178,7 @@ include '../includes/header.php';
             <!-- Statistics Cards -->
             <div class="orders-stats-grid">
                 <div class="order-stat-card stat-primary">
-                    <div class="stat-icon">
+                    <div class="stat-icon admin-stat-icon">
                         <i class="bi bi-basket"></i>
                     </div>
                     <div class="stat-content">
@@ -187,8 +187,8 @@ include '../includes/header.php';
                     </div>
                 </div>
                 
-                <div class="order-stat-card stat-warning">
-                    <div class="stat-icon">
+                <div class="order-stat-card stat-primary">
+                    <div class="stat-icon admin-stat-icon">
                         <i class="bi bi-hourglass-split"></i>
                     </div>
                     <div class="stat-content">
@@ -197,8 +197,8 @@ include '../includes/header.php';
                     </div>
                 </div>
                 
-                <div class="order-stat-card stat-success">
-                    <div class="stat-icon">
+                <div class="order-stat-card stat-primary">
+                    <div class="stat-icon admin-stat-icon">
                         <i class="bi bi-check-circle"></i>
                     </div>
                     <div class="stat-content">
@@ -207,8 +207,8 @@ include '../includes/header.php';
                     </div>
                 </div>
                 
-                <div class="order-stat-card stat-info">
-                    <div class="stat-icon">
+                <div class="order-stat-card stat-primary">
+                    <div class="stat-icon admin-stat-icon">
                         <i class="bi bi-currency-dollar"></i>
                     </div>
                     <div class="stat-content">
@@ -544,4 +544,4 @@ window.onclick = function(event) {
 }
 </script>
 
-<?php include '../includes/footer.php'; ?>
+<?php include '../includes/admin_footer.php'; ?>

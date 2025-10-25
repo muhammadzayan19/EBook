@@ -24,92 +24,30 @@ $order_data = $order_result->fetch_assoc();
 $order_count = $order_data['order_count'];
 $order_stmt->close();
 
+$subscription = null;
+$sub_stmt = $conn->prepare("SELECT * FROM subscriptions WHERE user_id = ? AND status = 'active' AND end_date > NOW() ORDER BY end_date DESC LIMIT 1");
+$sub_stmt->bind_param("i", $user_id);
+$sub_stmt->execute();
+$sub_result = $sub_stmt->get_result();
+if ($sub_result->num_rows > 0) {
+    $subscription = $sub_result->fetch_assoc();
+}
+$sub_stmt->close();
+
+$sub_access_count = 0;
+if ($subscription) {
+    $access_stmt = $conn->prepare("SELECT COUNT(*) as count FROM subscription_access WHERE subscription_id = ?");
+    $access_stmt->bind_param("i", $subscription['subscription_id']);
+    $access_stmt->execute();
+    $sub_access_count = $access_stmt->get_result()->fetch_assoc()['count'];
+    $access_stmt->close();
+}
+
 $page_title = "My Profile";
 
 include '../includes/header.php';
 ?>
 
-<style>
-.profile-header {
-    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
-    padding: 60px 0;
-    margin-bottom: 40px;
-}
-
-.profile-card {
-    background: var(--white);
-    border-radius: 16px;
-    padding: 2rem;
-    box-shadow: var(--shadow-md);
-    border: 1px solid var(--border-color);
-    margin-bottom: 2rem;
-}
-
-.profile-avatar {
-    width: 120px;
-    height: 120px;
-    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 3rem;
-    color: var(--white);
-    margin: 0 auto 1.5rem;
-    box-shadow: var(--shadow-lg);
-}
-
-.stat-box {
-    background: var(--bg-color);
-    padding: 1.5rem;
-    border-radius: 12px;
-    text-align: center;
-    border: 1px solid var(--border-color);
-}
-
-.stat-number {
-    font-size: 2rem;
-    font-weight: 800;
-    color: var(--primary-color);
-    margin-bottom: 0.5rem;
-}
-
-.stat-label {
-    color: var(--text-muted);
-    font-size: 0.9rem;
-    font-weight: 600;
-    text-transform: uppercase;
-}
-
-.info-group {
-    margin-bottom: 1.5rem;
-    padding-bottom: 1.5rem;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.info-group:last-child {
-    margin-bottom: 0;
-    padding-bottom: 0;
-    border-bottom: none;
-}
-
-.info-label {
-    font-weight: 600;
-    color: var(--text-muted);
-    font-size: 0.85rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 0.5rem;
-}
-
-.info-value {
-    font-size: 1.05rem;
-    color: var(--text-color);
-    font-weight: 500;
-}
-</style>
-
-<!-- Profile Header -->
 <section class="profile-header">
     <div class="container">
         <div class="text-center text-white">
@@ -119,11 +57,9 @@ include '../includes/header.php';
     </div>
 </section>
 
-<!-- Profile Content -->
 <section class="py-5">
     <div class="container">
         <div class="row">
-            <!-- User Info Card -->
             <div class="col-lg-4 mb-4">
                 <div class="profile-card">
                     <div class="profile-avatar">
@@ -154,31 +90,66 @@ include '../includes/header.php';
                 </div>
             </div>
 
-            <!-- Main Content -->
             <div class="col-lg-8">
-                <!-- Stats Row -->
                 <div class="row mb-4">
-                    <div class="col-md-4 mb-3">
+                    <div class="col-md-3 mb-3">
                         <div class="stat-box">
                             <div class="stat-number"><?php echo $order_count; ?></div>
                             <div class="stat-label">Total Orders</div>
                         </div>
                     </div>
-                    <div class="col-md-4 mb-3">
+                    <div class="col-md-3 mb-3">
                         <div class="stat-box">
                             <div class="stat-number">0</div>
                             <div class="stat-label">Competitions</div>
                         </div>
                     </div>
-                    <div class="col-md-4 mb-3">
+                    <div class="col-md-3 mb-3">
                         <div class="stat-box">
                             <div class="stat-number">0</div>
                             <div class="stat-label">Downloads</div>
                         </div>
                     </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="stat-box <?php echo $subscription ? 'stat-success' : ''; ?>">
+                            <div class="stat-number">
+                                <?php echo $subscription ? '<i class="bi bi-check-circle"></i>' : '<i class="bi bi-x-circle"></i>'; ?>
+                            </div>
+                            <div class="stat-label">Subscription</div>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- Account Information -->
+                <?php if ($subscription): ?>
+                <div class="alert alert-success mb-4">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <h5 class="mb-1"><i class="bi bi-star-fill me-2"></i>Active Subscription</h5>
+                            <p class="mb-0">
+                                <strong><?php echo ucfirst($subscription['plan_type']); ?> Plan</strong> • 
+                                Expires: <?php echo date('F j, Y', strtotime($subscription['end_date'])); ?> •
+                                Access to <?php echo $sub_access_count; ?> books
+                            </p>
+                        </div>
+                        <a href="manage_subscription.php" class="btn btn-outline-success">
+                            Manage
+                        </a>
+                    </div>
+                </div>
+                <?php else: ?>
+                <div class="alert alert-info mb-4">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <h5 class="mb-1"><i class="bi bi-info-circle me-2"></i>No Active Subscription</h5>
+                            <p class="mb-0">Subscribe now for unlimited access to our entire book collection</p>
+                        </div>
+                        <a href="subscription.php" class="btn btn-primary">
+                            Subscribe Now
+                        </a>
+                    </div>
+                </div>
+                <?php endif; ?>
+
                 <div class="profile-card">
                     <h4 class="mb-4">
                         <i class="bi bi-person-badge me-2"></i>Account Information
@@ -218,7 +189,6 @@ include '../includes/header.php';
                     </div>
                 </div>
 
-                <!-- Recent Activity -->
                 <div class="profile-card mt-4">
                     <h4 class="mb-4">
                         <i class="bi bi-clock-history me-2"></i>Recent Activity

@@ -94,17 +94,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-if (!isset($_SESSION['timer_start_' . $comp_id])) {
+$timer_started = isset($_SESSION['timer_start_' . $comp_id]);
+
+if (isset($_POST['start_timer']) && !$timer_started) {
     $_SESSION['timer_start_' . $comp_id] = time();
+    $timer_started = true;
 }
 
-$timer_start = $_SESSION['timer_start_' . $comp_id];
-$time_limit = 3 * 60 * 60;
-$time_elapsed = time() - $timer_start;
-$time_remaining = max(0, $time_limit - $time_elapsed);
+if ($timer_started) {
+    $timer_start = $_SESSION['timer_start_' . $comp_id];
+    $time_limit = 3 * 60 * 60;
+    $time_elapsed = time() - $timer_start;
+    $time_remaining = max(0, $time_limit - $time_elapsed);
+} else {
+    $time_remaining = 3 * 60 * 60;
+}
 ?>
 
-<!-- Page Header -->
 <section class="page-header">
     <div class="container">
         <div class="row">
@@ -123,7 +129,6 @@ $time_remaining = max(0, $time_limit - $time_elapsed);
     </div>
 </section>
 
-<!-- Upload Section -->
 <section class="upload-essay-section py-5">
     <div class="container">
         <?php if ($success_message): ?>
@@ -145,9 +150,22 @@ $time_remaining = max(0, $time_limit - $time_elapsed);
         </div>
         <?php endif; ?>
 
-        <?php if (!$already_submitted): ?>
+        <?php if (!$already_submitted && !$timer_started): ?>
+            <div class="start-competition-card mb-4">
+                <div class="text-center py-5">
+                    <i class="bi bi-clock-history" style="font-size: 4rem; color: var(--primary-color);"></i>
+                    <h4 class="mt-4 mb-3">Ready to Start?</h4>
+                    <p class="text-muted mb-4">Once you start, you'll have 3 hours to complete and submit your entry.</p>
+                    <form method="POST">
+                        <button type="submit" name="start_timer" class="btn btn-primary btn-lg">
+                            <i class="bi bi-play-circle me-2"></i>Start Competition
+                        </button>
+                    </form>
+                </div>
+            </div>
+            
+        <?php elseif ($timer_started && !$already_submitted): ?>
         <div class="row">
-            <!-- Main Upload Form -->
             <div class="col-lg-8 mb-4">
                 <div class="upload-card">
                     <div class="upload-header">
@@ -157,7 +175,6 @@ $time_remaining = max(0, $time_limit - $time_elapsed);
                         <p class="text-muted">Upload your essay or story in .doc, .docx, or .pdf format (Max 5MB)</p>
                     </div>
                     
-                    <!-- Timer Display -->
                     <div class="timer-display" id="timerDisplay">
                         <div class="timer-icon">
                             <i class="bi bi-clock-history"></i>
@@ -174,7 +191,6 @@ $time_remaining = max(0, $time_limit - $time_elapsed);
                         </div>
                     </div>
                     
-                    <!-- Competition Topic -->
                     <div class="topic-display">
                         <h5 class="topic-title">
                             <i class="bi bi-lightbulb me-2"></i>Competition Topic
@@ -184,7 +200,6 @@ $time_remaining = max(0, $time_limit - $time_elapsed);
                         </div>
                     </div>
                     
-                    <!-- Upload Form -->
                     <form method="POST" action="" enctype="multipart/form-data" class="upload-form" id="uploadForm">
                         <div class="file-upload-wrapper">
                             <input type="file" name="essay_file" id="essayFile" class="file-input" 
@@ -237,10 +252,8 @@ $time_remaining = max(0, $time_limit - $time_elapsed);
                 </div>
             </div>
             
-            <!-- Sidebar -->
             <div class="col-lg-4">
                 <div class="upload-sidebar">
-                    <!-- Competition Info -->
                     <div class="sidebar-card">
                         <h6 class="sidebar-title">
                             <i class="bi bi-trophy me-2"></i>Competition Details
@@ -264,8 +277,7 @@ $time_remaining = max(0, $time_limit - $time_elapsed);
                             </div>
                         </div>
                     </div>
-                    
-                    <!-- Tips Card -->
+
                     <div class="sidebar-card mt-4">
                         <h6 class="sidebar-title">
                             <i class="bi bi-lightbulb me-2"></i>Writing Tips
@@ -279,7 +291,6 @@ $time_remaining = max(0, $time_limit - $time_elapsed);
                         </ul>
                     </div>
                     
-                    <!-- Help Card -->
                     <div class="sidebar-card mt-4">
                         <h6 class="sidebar-title">
                             <i class="bi bi-question-circle me-2"></i>Need Help?
@@ -290,7 +301,6 @@ $time_remaining = max(0, $time_limit - $time_elapsed);
                         </a>
                     </div>
                     
-                    <!-- Reminder Card -->
                     <div class="reminder-card mt-4">
                         <i class="bi bi-info-circle-fill"></i>
                         <div>

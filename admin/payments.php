@@ -118,7 +118,7 @@ $monthly_query = "SELECT
 
 $monthly_result = mysqli_query($conn, $monthly_query);
 
-include '../includes/header.php';
+include '../includes/admin_header.php';
 ?>
 
 <link rel="stylesheet" href="../assets/css/admin_payments.css">
@@ -166,7 +166,7 @@ include '../includes/header.php';
             <!-- Statistics Cards -->
             <div class="stats-grid">
                 <div class="stat-card stat-primary">
-                    <div class="stat-icon">
+                    <div class="stat-icon admin-stat-icon">
                         <i class="bi bi-credit-card"></i>
                     </div>
                     <div class="stat-details">
@@ -176,8 +176,8 @@ include '../includes/header.php';
                     </div>
                 </div>
                 
-                <div class="stat-card stat-success">
-                    <div class="stat-icon">
+                <div class="stat-card stat-primary">
+                    <div class="stat-icon admin-stat-icon">
                         <i class="bi bi-cash-stack"></i>
                     </div>
                     <div class="stat-details">
@@ -187,8 +187,8 @@ include '../includes/header.php';
                     </div>
                 </div>
                 
-                <div class="stat-card stat-warning">
-                    <div class="stat-icon">
+                <div class="stat-card stat-primary">
+                    <div class="stat-icon admin-stat-icon">
                         <i class="bi bi-clock-history"></i>
                     </div>
                     <div class="stat-details">
@@ -198,8 +198,8 @@ include '../includes/header.php';
                     </div>
                 </div>
                 
-                <div class="stat-card stat-danger">
-                    <div class="stat-icon">
+                <div class="stat-card stat-primary">
+                    <div class="stat-icon admin-stat-icon">
                         <i class="bi bi-x-circle"></i>
                     </div>
                     <div class="stat-details">
@@ -504,6 +504,7 @@ new Chart(ctx, {
 </script>
 
 <?php
-include '../includes/footer.php';
+
 mysqli_close($conn);
+include '../includes/admin_footer.php';
 ?>

@@ -44,7 +44,6 @@ $winners_result = $conn->query("
 ");
 ?>
 
-<!-- Page Header -->
 <section class="page-header">
     <div class="container">
         <div class="row">
@@ -63,7 +62,6 @@ $winners_result = $conn->query("
 </section>
 
 <?php if ($comp_id > 0 && $single_competition): ?>
-<!-- Single Competition Detail -->
 <section class="competition-detail-section py-5">
     <div class="container">
         <div class="row">
@@ -224,7 +222,6 @@ setInterval(updateCountdown, 60000);
 </script>
 
 <?php else: ?>
-<!-- Competitions Listing -->
 <section class="competitions-listing-section py-5">
     <div class="container">
         <div class="row mb-5">
@@ -293,7 +290,6 @@ setInterval(updateCountdown, 60000);
     </div>
 </section>
 
-<!-- Recent Winners Section -->
 <?php if ($winners_result->num_rows > 0): ?>
 <section class="winners-section py-5 bg-light">
     <div class="container">
@@ -333,7 +329,6 @@ setInterval(updateCountdown, 60000);
 </section>
 <?php endif; ?>
 
-<!-- How It Works Section -->
 <section class="how-it-works-section py-5">
     <div class="container">
         <div class="row mb-5">

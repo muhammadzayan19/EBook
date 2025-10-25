@@ -73,7 +73,9 @@ EBOOK/
 ├── includes/
 │   ├── header.php            # Navigation / layout header
 │   ├── footer.php            # Footer template
-│   └── functions.php         # Common helper functions
+│   └── admin_header.php      # Header for Admin Pages
+│   └── admin_footer.php      # Footer for Admin Pages
+│   └── admin_sidebar.php     # Sidebar for Admin Pages
 │
 ├── admin/
 │   ├── login.php             # Admin login page
@@ -94,18 +96,22 @@ EBOOK/
 │   ├── order.php             # Order placement
 │   ├── competition.php       # Competition landing
 │   ├── upload_essay.php      # Essay upload page
+│   ├── my_orders.php         # User Orders
+│   ├── my_submissions.php    # Essay Submissions
+│   ├── my_books.php          # User Books
 │   └── logout.php
 │
 ├── uploads/
 │   ├── books/                # Uploaded PDF files
 │   └── essays/               # Uploaded user essays
+│   └── book_covers/          # Uploaded Book Covers
 │
 ├── assets/
 │   ├── css/
 │   ├── js/
 │   └── images/
 │
-├── setup_database.php        # Auto-creates DB & tables
+├── db_setup.php              # Auto-creates DB & tables
 ├── index.php                 # Home page
 ├── about.php                 # About the publisher
 ├── contact.php               # Contact information
@@ -215,6 +221,7 @@ EBOOK/
 | user_id | INT | FK | Linked to users.user_id |
 | position | VARCHAR(50) |  | e.g., 1st, 2nd, 3rd |
 | prize | VARCHAR(255) |  | Award received |
+| remarks | VARCHAR(255) |  | Comment on Winner |
 | announced_at | DATETIME |  | Announcement date |
 
 ---

@@ -12,9 +12,10 @@ function isActive($page) {
 
 $path_parts = explode('/', trim($_SERVER['REQUEST_URI'], '/'));
 $in_subdirectory = (in_array($current_page, [
-    'login.php', 'register.php', 'books.php', 
-    'book_details.php', 'order.php', 'competition.php',
-    'upload_essay.php', 'profile.php', 'manage_books', "manage_competitions"
+    'login.php', 'register.php', 'books.php', 'my_orders.php', 'my_submissions.php', 'my_books.php',
+    'book_details.php', 'order.php', 'competition.php', 'subscription.php',
+    'upload_essay.php', 'profile.php', 'manage_books', "manage_competitions",
+    'subscription.php', 'subscription_process.php', 'payment_process.php', 'update_payment.php',
 ]) || strpos($_SERVER['REQUEST_URI'], '/admin/') !== false) ? '../' : '';
 ?>
 <!DOCTYPE html>
@@ -36,7 +37,6 @@ $in_subdirectory = (in_array($current_page, [
 </head>
 <body>
     
-    <!-- Navigation Bar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top">
         <div class="container">
             <a class="navbar-brand fw-bold" href="<?php echo $in_subdirectory; ?>index.php">
@@ -71,6 +71,7 @@ $in_subdirectory = (in_array($current_page, [
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
                                 <li><a class="dropdown-item" href="<?php echo $in_subdirectory; ?>user/profile.php"><i class="bi bi-person me-2"></i>My Profile</a></li>
+                                <li><a class="dropdown-item" href="<?php echo $in_subdirectory; ?>user/my_books.php"><i class="bi bi-book me-2"></i>My Books</a></li>
                                 <li><a class="dropdown-item" href="<?php echo $in_subdirectory; ?>user/my_orders.php"><i class="bi bi-bag me-2"></i>My Orders</a></li>
                                 <li><a class="dropdown-item" href="<?php echo $in_subdirectory; ?>user/my_submissions.php"><i class="bi bi-file-earmark-text me-2"></i>My Submissions</a></li>
                                 <li><hr class="dropdown-divider"></li>
