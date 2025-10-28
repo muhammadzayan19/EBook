@@ -50,9 +50,7 @@ include '../includes/header.php';
 ?>
 
 <!-- Admin-Specific Styles -->
-<style>
-
-</style>
+<link rel="stylesheet" href="../assets/css/admin.css">
 
     <!-- Admin Login Section -->
     <section class="admin-auth-section">
