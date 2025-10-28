@@ -194,7 +194,7 @@ if (isset($_SESSION['payment_success'])) {
                                 
                             <?php else: ?>
                                 <?php if (!isset($_SESSION['user_id'])): ?>
-                                    <a href="../auth/login.php" class="btn btn-primary btn-lg w-100 mb-2">
+                                    <a href="login.php" class="btn btn-primary btn-lg w-100 mb-2">
                                         <i class="bi bi-box-arrow-in-right me-2"></i>Login to Access
                                     </a>
                                     

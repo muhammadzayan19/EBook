@@ -11,6 +11,7 @@ require_once '../config/db.php';
 $user_id = $_SESSION['user_id'];
 $page_title = "My Books";
 
+// Fetch user's books with proper table names
 $stmt = $conn->prepare("
     SELECT DISTINCT
         b.book_id,
@@ -32,9 +33,33 @@ $stmt = $conn->prepare("
     INNER JOIN books b ON o.book_id = b.book_id
     LEFT JOIN payments p ON o.order_id = p.order_id
     WHERE o.user_id = ? AND p.payment_status = 'completed'
-    ORDER BY o.order_date DESC
+
+    UNION
+
+    SELECT DISTINCT
+        b.book_id,
+        b.title,
+        b.author,
+        b.category,
+        b.description,
+        b.price,
+        b.type,
+        b.file_path,
+        b.image_path,
+        b.is_free,
+        NULL as order_id,
+        s.start_date as order_date,
+        'subscription' as order_type,
+        s.status as order_status,
+        'active' as payment_status
+    FROM subscriptions s
+    INNER JOIN subscription_access sa ON s.subscription_id = sa.subscription_id
+    INNER JOIN books b ON sa.book_id = b.book_id
+    WHERE s.user_id = ? AND s.status = 'active' AND (s.end_date IS NULL OR s.end_date > NOW())
+
+    ORDER BY order_date DESC
 ");
-$stmt->bind_param("i", $user_id);
+$stmt->bind_param("ii", $user_id, $user_id);
 $stmt->execute();
 $result = $stmt->get_result();
 $books = $result->fetch_all(MYSQLI_ASSOC);
@@ -43,17 +68,17 @@ $stmt->close();
 $total_books = count($books);
 $pdf_count = 0;
 $physical_count = 0;
-$total_spent = 0;
+$subscription_count = 0;
 $categories = [];
 
 foreach ($books as $book) {
     if ($book['order_type'] === 'pdf') {
         $pdf_count++;
+    } elseif ($book['order_type'] === 'subscription') {
+        $subscription_count++;
     } else {
         $physical_count++;
     }
-    
-    $total_spent += $book['price'];
     
     if (!in_array($book['category'], $categories)) {
         $categories[] = $book['category'];
@@ -61,6 +86,27 @@ foreach ($books as $book) {
 }
 
 $categories_count = count($categories);
+
+// Helper function to get book image
+function getBookImage($book) {
+    if (empty($book['image_path'])) {
+        return '../assets/images/books/default.jpg';
+    }
+    
+    $paths = [
+        '../' . $book['image_path'],
+        $book['image_path'],
+        '../uploads/book_covers/' . basename($book['image_path'])
+    ];
+    
+    foreach ($paths as $path) {
+        if (file_exists($path)) {
+            return $path;
+        }
+    }
+    
+    return '../assets/images/books/default.jpg';
+}
 
 include '../includes/header.php';
 ?>
@@ -124,12 +170,12 @@ include '../includes/header.php';
             
             <div class="col-lg-3 col-md-6 mb-3">
                 <div class="library-stat-card">
-                    <div class="stat-icon-wrapper stat-categories">
-                        <i class="bi bi-grid"></i>
+                    <div class="stat-icon-wrapper stat-success">
+                        <i class="bi bi-star-fill"></i>
                     </div>
                     <div class="stat-content">
-                        <div class="stat-number"><?php echo $categories_count; ?></div>
-                        <div class="stat-label">Categories</div>
+                        <div class="stat-number"><?php echo $subscription_count; ?></div>
+                        <div class="stat-label">Subscription <br>Books</div>
                     </div>
                 </div>
             </div>
@@ -148,13 +194,16 @@ include '../includes/header.php';
                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                         <div class="filter-buttons">
                             <button class="filter-btn active" data-filter="all">
-                                <i class="bi bi-grid"></i> All
+                                <i class="bi bi-grid"></i> <span>All</span>
                             </button>
                             <button class="filter-btn" data-filter="pdf">
-                                <i class="bi bi-file-pdf"></i> PDF
+                                <i class="bi bi-file-pdf"></i> <span>PDF</span>
+                            </button>
+                            <button class="filter-btn" data-filter="subscription">
+                                <i class="bi bi-star"></i> <span>Subscription</span>
                             </button>
                             <button class="filter-btn" data-filter="physical">
-                                <i class="bi bi-box"></i> Physical
+                                <i class="bi bi-box"></i> <span>Physical</span>
                             </button>
                         </div>
                         <div class="view-toggle">
@@ -183,18 +232,25 @@ include '../includes/header.php';
         </div>
         <?php else: ?>
         <div class="books-grid" id="booksGrid">
-            <?php foreach ($books as $book): ?>
+            <?php foreach ($books as $book): 
+                $imagePath = getBookImage($book);
+            ?>
             <div class="library-book-item" 
-                 data-type="<?php echo $book['order_type']; ?>" 
-                 data-title="<?php echo strtolower($book['title']); ?>"
-                 data-author="<?php echo strtolower($book['author']); ?>"
-                 data-category="<?php echo strtolower($book['category']); ?>">
+                 data-type="<?php echo htmlspecialchars($book['order_type']); ?>" 
+                 data-title="<?php echo strtolower(htmlspecialchars($book['title'])); ?>"
+                 data-author="<?php echo strtolower(htmlspecialchars($book['author'])); ?>"
+                 data-category="<?php echo strtolower(htmlspecialchars($book['category'])); ?>">
                 <div class="library-book-card">
                     <div class="book-card-image">
-                        <img src="../assets/images/books/default.jpg" 
-                             alt="<?php echo htmlspecialchars($book['title']); ?>">
+                        <img src="<?php echo htmlspecialchars($imagePath); ?>" 
+                             alt="<?php echo htmlspecialchars($book['title']); ?>"
+                             onerror="this.src='../assets/images/books/default.jpg'">
                         <div class="book-type-overlay">
-                            <?php if ($book['order_type'] === 'pdf'): ?>
+                            <?php if ($book['order_type'] === 'subscription'): ?>
+                                <span class="type-badge badge-subscription">
+                                    <i class="bi bi-star"></i> Subscription
+                                </span>
+                            <?php elseif ($book['order_type'] === 'pdf'): ?>
                                 <span class="type-badge badge-pdf">
                                     <i class="bi bi-file-pdf"></i> PDF
                                 </span>
@@ -227,15 +283,15 @@ include '../includes/header.php';
                         <div class="book-purchase-info">
                             <div class="purchase-date">
                                 <i class="bi bi-calendar-check"></i>
-                                <span>Purchased <?php echo date('M j, Y', strtotime($book['order_date'])); ?></span>
+                                <span><?php echo $book['order_type'] === 'subscription' ? 'Subscription Access' : 'Purchased ' . date('M j, Y', strtotime($book['order_date'])); ?></span>
                             </div>
                         </div>
                     </div>
                     
                     <div class="book-card-actions">
-                        <?php if ($book['order_type'] === 'pdf' && !empty($book['file_path'])): ?>
+                        <?php if (($book['order_type'] === 'pdf' || $book['order_type'] === 'subscription') && !empty($book['file_path'])): ?>
                             <a href="download.php?book_id=<?php echo $book['book_id']; ?>" 
-                            class="btn btn-primary btn-action">
+                               class="btn btn-primary btn-action">
                                 <i class="bi bi-download"></i>
                                 <span>Download PDF</span>
                             </a>
@@ -243,10 +299,12 @@ include '../includes/header.php';
                         
                         <button class="btn btn-outline-secondary btn-action read-online-btn" 
                                 data-book-id="<?php echo $book['book_id']; ?>"
-                                data-book-title="<?php echo htmlspecialchars($book['title']); ?>">
+                                data-book-title="<?php echo htmlspecialchars($book['title']); ?>"
+                                data-file-path="<?php echo htmlspecialchars($book['file_path']); ?>">
                             <i class="bi bi-book-half"></i>
                             <span>Read Online</span>
                         </button>
+
                         
                         <a href="book_details.php?id=<?php echo $book['book_id']; ?>" 
                            class="btn btn-outline-primary btn-action">
@@ -262,14 +320,14 @@ include '../includes/header.php';
     </div>
 </section>
 
-<div class="modal fade" id="readingModal" tabindex="-1">
+<div class="modal fade" id="readingModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered">
         <div class="modal-content reading-modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="readingModalTitle">
-                    <i class="bi bi-book-half me-2"></i>Reading Mode
+                    <i class="bi bi-book-half"></i>Reading Mode
                 </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body p-0">
                 <div class="reading-container">
@@ -277,21 +335,14 @@ include '../includes/header.php';
                         <i class="bi bi-book"></i>
                         <h4>PDF Reader</h4>
                         <p>Your book will be displayed here.</p>
-                        <small class="text-muted">Note: Full PDF reader functionality requires additional implementation</small>
+                        <small class="text-muted">Click "Read Online" on any book to start reading</small>
                     </div>
                 </div>
             </div>
             <div class="modal-footer">
-                <div class="reading-controls">
-                    <button class="btn btn-sm btn-outline-secondary" disabled>
-                        <i class="bi bi-arrow-left"></i> Previous
-                    </button>
-                    <span class="page-info">Page 1 of 1</span>
-                    <button class="btn btn-sm btn-outline-secondary" disabled>
-                        Next <i class="bi bi-arrow-right"></i>
-                    </button>
-                </div>
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-2"></i>Close
+                </button>
             </div>
         </div>
     </div>
@@ -316,6 +367,7 @@ include '../includes/header.php';
 <?php endif; ?>
 
 <script>
+// Search functionality
 document.getElementById('searchBooks').addEventListener('input', function() {
     const searchTerm = this.value.toLowerCase();
     const books = document.querySelectorAll('.library-book-item');
@@ -333,6 +385,7 @@ document.getElementById('searchBooks').addEventListener('input', function() {
     });
 });
 
+// Filter functionality
 document.querySelectorAll('.filter-btn').forEach(btn => {
     btn.addEventListener('click', function() {
         document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
@@ -355,6 +408,7 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
     });
 });
 
+// View toggle
 document.querySelectorAll('.view-btn').forEach(btn => {
     btn.addEventListener('click', function() {
         document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
@@ -373,17 +427,41 @@ document.querySelectorAll('.view-btn').forEach(btn => {
     });
 });
 
+// Reading modal
 document.querySelectorAll('.read-online-btn').forEach(btn => {
     btn.addEventListener('click', function() {
         const bookTitle = this.dataset.bookTitle;
-        document.getElementById('readingModalTitle').innerHTML = 
-            `<i class="bi bi-book-half me-2"></i>${bookTitle}`;
-        
+        const filePath = this.dataset.filePath;
+
+        const modalTitle = document.getElementById('readingModalTitle');
+        const readingContainer = document.querySelector('.reading-container');
+
+        modalTitle.innerHTML = `<i class="bi bi-book-half me-2"></i>${bookTitle}`;
+
+        // If no file path
+        if (!filePath) {
+            readingContainer.innerHTML = `
+                <div class="reading-placeholder">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <h4>File Not Available</h4>
+                    <p>Sorry, this book doesn't have an online version yet.</p>
+                </div>
+            `;
+        } else {
+            // Show PDF inside iframe
+            readingContainer.innerHTML = `
+                <embed src="../<?php echo $book['file_path']; ?>#view=FitH" type="application/pdf" width="90%" height="500px" />
+            `;
+        }
+
+        // Open modal
         const modal = new bootstrap.Modal(document.getElementById('readingModal'));
         modal.show();
     });
 });
 
+
+// Animate book cards on load
 document.addEventListener('DOMContentLoaded', function() {
     const books = document.querySelectorAll('.library-book-item');
     books.forEach((book, index) => {
@@ -397,13 +475,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 book.style.transform = 'translateY(0)';
             }, 50);
         }, index * 80);
-    });
-});
-
-document.querySelectorAll('a[download]').forEach(link => {
-    link.addEventListener('click', function() {
-        const bookTitle = this.closest('.library-book-card').querySelector('.book-title').textContent;
-        console.log(`Downloading: ${bookTitle}`);
     });
 });
 </script>

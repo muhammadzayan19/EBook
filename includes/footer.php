@@ -82,7 +82,7 @@ $in_subdirectory = in_array($current_page, ['login.php', 'register.php', 'books.
             });
         });
 
-        const alerts = document.querySelectorAll('.alert');
+        const alerts = document.querySelectorAll('.alert-danger');
         alerts.forEach(alert => {
             setTimeout(() => {
                 const bsAlert = new bootstrap.Alert(alert);

@@ -20,5 +20,6 @@ $in_subdirectory = '../';
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <link rel="stylesheet" href="<?php echo $in_subdirectory; ?>assets/css/style.css">
     <link rel="stylesheet" href="<?php echo $in_subdirectory; ?>assets/css/admin.css">
+    <link rel="shortcut icon" href="<?php echo $in_subdirectory; ?>assets/images/ZeBook.webp" type="image/webp">
 </head>
 <body class="admin-body">

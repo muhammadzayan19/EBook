@@ -96,7 +96,8 @@ $tables = [
     file_path VARCHAR(255),
     submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (comp_id) REFERENCES competitions(comp_id) ON DELETE CASCADE,
-    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    UNIQUE KEY unique_submission (comp_id, user_id)
 ) ENGINE=InnoDB;",
 
 "CREATE TABLE IF NOT EXISTS winners (
@@ -148,7 +149,34 @@ $tables = [
     setting_value TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB;"
+) ENGINE=InnoDB;",
+
+"CREATE TABLE IF NOT EXISTS subscription_payments (
+    sub_payment_id INT AUTO_INCREMENT PRIMARY KEY,
+    subscription_id INT NOT NULL,
+    payment_method ENUM('credit_card','paypal','bank_transfer','debit_card') DEFAULT 'credit_card',
+    amount DECIMAL(8,2),
+    payment_status ENUM('pending','completed','failed') DEFAULT 'pending',
+    payment_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (subscription_id) REFERENCES subscriptions(subscription_id) ON DELETE CASCADE
+) ENGINE=InnoDB;",
+
+"CREATE TABLE IF NOT EXISTS `user_subscriptions` (
+    `subscription_id` INT AUTO_INCREMENT PRIMARY KEY,
+    `user_id` INT NOT NULL,
+    `plan_type` ENUM('monthly','yearly') DEFAULT 'monthly',
+    `start_date` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    `end_date` DATETIME,
+    `status` ENUM('active','cancelled','expired') DEFAULT 'active',
+    `amount` DECIMAL(10,2),
+    `payment_method` ENUM('credit_card','paypal','bank_transfer','debit_card','stripe') DEFAULT 'credit_card',
+    `auto_renew` TINYINT(1) DEFAULT 1,
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX `idx_user` (`user_id`),
+    INDEX `idx_status` (`status`),
+    INDEX `idx_active` (`user_id`, `status`, `end_date`),
+    FOREIGN KEY (`user_id`) REFERENCES `users`(`user_id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;"
 ];
 
 foreach ($tables as $query) {

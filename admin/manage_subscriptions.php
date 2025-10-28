@@ -157,18 +157,16 @@ include '../includes/admin_header.php';
         </header>
         
         <div class="admin-content">
-            <?php if (isset($_SESSION['success_msg'])): ?>
+            <?php if (!empty($success_msg)): ?>
                 <div class="alert alert-success">
-                    <i class="bi bi-check-circle"></i> <?php echo $_SESSION['success_msg']; ?>
+                    <i class="bi bi-check-circle"></i> <?php echo $success_msg; ?>
                 </div>
-                <?php unset($_SESSION['success_msg']); ?>
             <?php endif; ?>
-
-            <?php if (isset($_SESSION['error_msg'])): ?>
+            
+            <?php if (!empty($error_msg)): ?>
                 <div class="alert alert-danger">
-                    <i class="bi bi-exclamation-triangle"></i> <?php echo $_SESSION['error_msg']; ?>
+                    <i class="bi bi-exclamation-triangle"></i> <?php echo $error_msg; ?>
                 </div>
-                <?php unset($_SESSION['error_msg']); ?>
             <?php endif; ?>
             
             <!-- Statistics Cards -->

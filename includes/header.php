@@ -15,7 +15,7 @@ $in_subdirectory = (in_array($current_page, [
     'login.php', 'register.php', 'books.php', 'my_orders.php', 'my_submissions.php', 'my_books.php',
     'book_details.php', 'order.php', 'competition.php', 'subscription.php',
     'upload_essay.php', 'profile.php', 'manage_books', "manage_competitions",
-    'subscription.php', 'subscription_process.php', 'payment_process.php', 'update_payment.php',
+    'subscription.php', 'manage_subscription.php', 'subscription_process.php', 'payment_process.php', 'update_payment.php',
 ]) || strpos($_SERVER['REQUEST_URI'], '/admin/') !== false) ? '../' : '';
 ?>
 <!DOCTYPE html>
@@ -33,7 +33,8 @@ $in_subdirectory = (in_array($current_page, [
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     
     <link rel="stylesheet" href="<?php echo $in_subdirectory; ?>assets/css/style.css">
-    <link rel="stylesheet" href="<?php echo $in_subdirectory; ?>assets/css/admin.css">
+    <!-- <link rel="stylesheet" href="<?php echo $in_subdirectory; ?>assets/css/admin.css"> -->
+    <link rel="shortcut icon" href="<?php echo $in_subdirectory; ?>assets/images/ZeBook.webp" type="image/webp">
 </head>
 <body>
     

@@ -11,6 +11,23 @@ require_once '../config/db.php';
 $user_id = $_SESSION['user_id'];
 $page_title = "My Orders";
 
+// Function to get the correct book image path
+function getBookImage($book) {
+    $paths = [
+        '../' . $book['image_path'],
+        $book['image_path'],
+        '../uploads/book_covers/' . basename($book['image_path'])
+    ];
+    
+    foreach ($paths as $path) {
+        if (!empty($book['image_path']) && file_exists($path)) {
+            return $path;
+        }
+    }
+    
+    return '../assets/images/books/default.jpg';
+}
+
 $stmt = $conn->prepare("
     SELECT 
         o.order_id,
@@ -173,9 +190,10 @@ include '../includes/header.php';
                         <div class="row">
                             <div class="col-md-2 col-sm-3 mb-3 mb-md-0">
                                 <div class="order-book-image">
-                                    <img src="../assets/images/books/default.jpg" 
+                                    <img src="<?php echo htmlspecialchars(getBookImage($order)); ?>" 
                                          alt="<?php echo htmlspecialchars($order['title']); ?>" 
-                                         class="img-fluid">
+                                         class="img-fluid"
+                                         onerror="this.src='../assets/images/books/default.jpg'">
                                     <?php if ($order['is_free']): ?>
                                         <span class="book-free-badge">FREE</span>
                                     <?php endif; ?>
@@ -274,8 +292,8 @@ include '../includes/header.php';
 </section>
 
 <div class="modal fade" id="orderDetailsModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content" style="max-height: 85vh;">
             <div class="modal-header">
                 <h5 class="modal-title">
                     <i class="bi bi-receipt me-2"></i>Order Details
@@ -289,6 +307,9 @@ include '../includes/header.php';
 </div>
 
 <script>
+// Store orders data for modal
+const ordersData = <?php echo json_encode($orders); ?>;
+
 document.getElementById('searchOrders').addEventListener('input', function() {
     const searchTerm = this.value.toLowerCase();
     const orders = document.querySelectorAll('.order-item');
@@ -329,12 +350,200 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
 
 document.querySelectorAll('.view-details-btn').forEach(btn => {
     btn.addEventListener('click', function() {
-        const orderId = this.dataset.orderId;
+        const orderId = parseInt(this.dataset.orderId);
+        const order = ordersData.find(o => o.order_id == orderId);
+        
+        if (!order) {
+            document.getElementById('orderDetailsContent').innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle me-2"></i>Order not found
+                </div>
+            `;
+            return;
+        }
+        
+        const statusBadgeClass = order.status === 'pending' ? 'bg-warning' : 'bg-success';
+        const statusIcon = order.status === 'pending' ? 'clock-history' : 'check-circle';
+        const paymentStatusClass = order.payment_status === 'completed' ? 'text-success' : 'text-warning';
+        
+        let downloadSection = '';
+        if (order.status === 'paid' && order.order_type === 'pdf' && order.file_path) {
+            downloadSection = `
+                <div class="alert alert-success d-flex align-items-center justify-content-between">
+                    <div>
+                        <i class="bi bi-file-earmark-pdf me-2"></i>
+                        <strong>PDF Available for Download</strong>
+                    </div>
+                    <a href="../${order.file_path}" class="btn btn-success btn-sm" download>
+                        <i class="bi bi-download me-1"></i>Download Now
+                    </a>
+                </div>
+            `;
+        }
+        
         document.getElementById('orderDetailsContent').innerHTML = `
-            <div class="text-center py-4">
-                <i class="bi bi-receipt" style="font-size: 3rem; color: var(--primary-color);"></i>
-                <h5 class="mt-3">Order #${orderId.padStart(6, '0')}</h5>
-                <p class="text-muted">Detailed order information will be displayed here.</p>
+            <div class="order-details-modal">
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="detail-group">
+                            <label class="detail-label">Order ID</label>
+                            <div class="detail-value">
+                                <strong>#${String(order.order_id).padStart(6, '0')}</strong>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 text-md-end">
+                        <span class="badge ${statusBadgeClass} px-3 py-2">
+                            <i class="bi bi-${statusIcon} me-1"></i>
+                            ${order.status.toUpperCase()}
+                        </span>
+                    </div>
+                </div>
+                
+                ${downloadSection}
+                
+                <div class="card mb-3">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0"><i class="bi bi-book me-2"></i>Book Information</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3 mb-3 mb-md-0">
+                                <img src="<?php echo htmlspecialchars(getBookImage(['image_path' => ''])); ?>" 
+                                     alt="${order.title}" 
+                                     class="img-fluid rounded"
+                                     style="max-height: 200px; object-fit: cover;">
+                            </div>
+                            <div class="col-md-9">
+                                <h5 class="mb-2">${order.title}</h5>
+                                <p class="text-muted mb-2">
+                                    <i class="bi bi-person me-1"></i>By ${order.author}
+                                </p>
+                                <p class="mb-2">
+                                    <span class="badge bg-primary">${order.category}</span>
+                                </p>
+                                ${order.is_free == 1 ? '<span class="badge bg-success">FREE BOOK</span>' : ''}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card mb-3">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Order Information</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <div class="detail-group">
+                                    <label class="detail-label">Order Type</label>
+                                    <div class="detail-value">
+                                        <i class="bi bi-${order.order_type === 'pdf' ? 'file-pdf' : (order.order_type === 'cd' ? 'disc' : 'book')} me-1"></i>
+                                        ${order.order_type.toUpperCase()}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="detail-group">
+                                    <label class="detail-label">Quantity</label>
+                                    <div class="detail-value">${order.quantity}</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="detail-group">
+                                    <label class="detail-label">Order Date</label>
+                                    <div class="detail-value">
+                                        <i class="bi bi-calendar me-1"></i>
+                                        ${new Date(order.order_date).toLocaleDateString('en-US', { 
+                                            year: 'numeric', 
+                                            month: 'long', 
+                                            day: 'numeric',
+                                            hour: '2-digit',
+                                            minute: '2-digit'
+                                        })}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="detail-group">
+                                    <label class="detail-label">Total Amount</label>
+                                    <div class="detail-value">
+                                        <strong class="text-primary" style="font-size: 1.25rem;">
+                                            ${parseFloat(order.total_amount).toFixed(2)}
+                                        </strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                ${order.payment_method ? `
+                <div class="card mb-3">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0"><i class="bi bi-credit-card me-2"></i>Payment Information</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <div class="detail-group">
+                                    <label class="detail-label">Payment Method</label>
+                                    <div class="detail-value">
+                                        <i class="bi bi-credit-card me-1"></i>
+                                        ${order.payment_method.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="detail-group">
+                                    <label class="detail-label">Payment Status</label>
+                                    <div class="detail-value ${paymentStatusClass}">
+                                        <strong>${order.payment_status ? order.payment_status.toUpperCase() : 'PENDING'}</strong>
+                                    </div>
+                                </div>
+                            </div>
+                            ${order.payment_date ? `
+                            <div class="col-md-6 mb-3">
+                                <div class="detail-group">
+                                    <label class="detail-label">Payment Date</label>
+                                    <div class="detail-value">
+                                        <i class="bi bi-calendar-check me-1"></i>
+                                        ${new Date(order.payment_date).toLocaleDateString('en-US', { 
+                                            year: 'numeric', 
+                                            month: 'long', 
+                                            day: 'numeric',
+                                            hour: '2-digit',
+                                            minute: '2-digit'
+                                        })}
+                                    </div>
+                                </div>
+                            </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+                ` : ''}
+                
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0"><i class="bi bi-truck me-2"></i>Delivery Status</h6>
+                    </div>
+                    <div class="card-body">
+                        ${order.status === 'paid' ? `
+                            <div class="alert alert-success mb-0">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                ${order.order_type === 'pdf' 
+                                    ? '<strong>Digital Delivery Completed</strong><br>Your PDF is ready for download.' 
+                                    : '<strong>Physical Delivery in Progress</strong><br>Your order is being processed and will be shipped soon.'}
+                            </div>
+                        ` : `
+                            <div class="alert alert-warning mb-0">
+                                <i class="bi bi-clock-history me-2"></i>
+                                <strong>Pending Payment</strong><br>Please complete your payment to process this order.
+                            </div>
+                        `}
+                    </div>
+                </div>
             </div>
         `;
         

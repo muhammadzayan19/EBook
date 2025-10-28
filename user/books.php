@@ -216,7 +216,7 @@ if (isset($_SESSION['user_id'])) {
                         <div class="mt-4 p-3 bg-primary text-white rounded">
                             <h6 class="mb-2"><i class="bi bi-star-fill me-2"></i>Get Unlimited Access</h6>
                             <p class="small mb-2">Subscribe for unlimited access to all subscription books!</p>
-                            <a href="subscribe.php" class="btn btn-light btn-sm w-100">
+                            <a href="subscription.php" class="btn btn-light btn-sm w-100">
                                 <i class="bi bi-arrow-repeat me-1"></i>Subscribe Now
                             </a>
                         </div>

@@ -93,7 +93,7 @@ include '../includes/header.php';
                     </div>
                     <div class="stat-content">
                         <div class="stat-number"><?php echo $total_submissions; ?></div>
-                        <div class="stat-label">Total Submissions</div>
+                        <div class="stat-label">Total <br>Submissions</div>
                     </div>
                 </div>
             </div>
@@ -113,7 +113,7 @@ include '../includes/header.php';
             <div class="col-lg-3 col-md-6 mb-3">
                 <div class="submissions-stat-card">
                     <div class="stat-icon-wrapper stat-warning">
-                        <i class="bi bi-book"></i>
+                        <i style="color: white;" class="bi bi-book"></i>
                     </div>
                     <div class="stat-content">
                         <div class="stat-number"><?php echo $story_count; ?></div>

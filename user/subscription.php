@@ -300,7 +300,7 @@ include '../includes/header.php';
 <div class="modal fade" id="subscribeModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <div class="modal-header" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white;">
+            <div class="modal-header" style="background: #2563eb; color: white;">
                 <h5 class="modal-title">
                     <i class="bi bi-credit-card me-2"></i>Complete Your Subscription
                 </h5>
