@@ -39,8 +39,8 @@ $in_subdirectory = in_array($current_page, ['login.php', 'register.php', 'books.
                     <h6>Support</h6>
                     <ul>
                         <li><a href="<?php echo $in_subdirectory; ?>contact.php">Contact</a></li>
-                        <li><a href="#">Privacy Policy</a></li>
-                        <li><a href="#">Terms of Service</a></li>
+                        <li><a href="<?php echo $in_subdirectory; ?>admin/privacy.php">Privacy Policy</a></li>
+                        <li><a href="<?php echo $in_subdirectory; ?>admin/terms.php">Terms of Service</a></li>
                         <li><a href="<?php echo $in_subdirectory; ?>admin/login.php">Admin Portal</a></li>
                     </ul>
                 </div>

@@ -1,11 +1,11 @@
 <?php
 session_start();
 $page_title = "Privacy Policy";
-require_once 'config/db.php';
-include 'includes/header.php';
+require_once '../config/db.php';
+include '../includes/header.php';
 ?>
 
-<link rel="stylesheet" href="assets/css/legal-pages.css">
+<link rel="stylesheet" href="../assets/css/privacy.css">
 
 <section class="legal-page-header">
     <div class="container">
@@ -502,4 +502,4 @@ document.querySelectorAll('.legal-quick-nav a').forEach(link => {
 });
 </script>
 
-<?php include 'includes/footer.php'; ?>
+<?php include '../includes/footer.php'; ?>
