@@ -510,9 +510,10 @@ document.addEventListener('DOMContentLoaded', function() {
             const targetId = this.getAttribute('href');
             const targetElement = document.querySelector(targetId);
             if (targetElement) {
-                targetElement.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'start'
+                const offsetTop = targetElement.offsetTop - 100;
+                window.scrollTo({
+                    top: offsetTop,
+                    behavior: 'smooth'
                 });
                 
                 // Update URL without scrolling
@@ -521,33 +522,77 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Intersection Observer for active section highlighting
+    // Enhanced Intersection Observer for active section highlighting
     const observerOptions = {
         root: null,
-        rootMargin: '-100px 0px -66%',
-        threshold: 0
+        rootMargin: '-10% 0px -85% 0px',
+        threshold: [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]
     };
+    
+    let activeSection = null;
     
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                // Remove active class from all links
-                document.querySelectorAll('.legal-toc-list a').forEach(link => {
-                    link.classList.remove('active');
-                });
-                
-                // Add active class to current section link
-                const activeLink = document.querySelector(`.legal-toc-list a[data-section="${entry.target.id}"]`);
-                if (activeLink) {
-                    activeLink.classList.add('active');
-                }
+            if (entry.isIntersecting && entry.intersectionRatio > 0) {
+                activeSection = entry.target.id;
+                updateActiveLink(activeSection);
             }
         });
     }, observerOptions);
     
+    // Function to update active link
+    function updateActiveLink(sectionId) {
+        // Remove active class from all links
+        document.querySelectorAll('.legal-toc-list a').forEach(link => {
+            link.classList.remove('active');
+        });
+        
+        // Add active class to current section link
+        const activeLink = document.querySelector(`.legal-toc-list a[data-section="${sectionId}"]`);
+        if (activeLink) {
+            activeLink.classList.add('active');
+            
+            // Scroll the TOC list to keep active item visible
+            const tocListContainer = document.querySelector('.legal-toc-list');
+            const linkTop = activeLink.offsetTop;
+            const linkHeight = activeLink.offsetHeight;
+            const containerHeight = tocListContainer.clientHeight;
+            const scrollTop = tocListContainer.scrollTop;
+            
+            // Check if active link is outside visible area
+            if (linkTop < scrollTop || linkTop + linkHeight > scrollTop + containerHeight) {
+                activeLink.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }
+    }
+    
     // Observe all sections
     sections.forEach(section => {
         observer.observe(section);
+    });
+    
+    // Fallback scroll detection for more accurate active state
+    let scrollTimeout;
+    window.addEventListener('scroll', function() {
+        clearTimeout(scrollTimeout);
+        scrollTimeout = setTimeout(() => {
+            const scrollPosition = window.scrollY + 150;
+            
+            let currentSection = null;
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                const sectionBottom = sectionTop + section.offsetHeight;
+                
+                if (scrollPosition >= sectionTop && scrollPosition < sectionBottom) {
+                    currentSection = section.id;
+                }
+            });
+            
+            if (currentSection && currentSection !== activeSection) {
+                activeSection = currentSection;
+                updateActiveLink(currentSection);
+            }
+        }, 50);
     });
     
     // Update progress bar on scroll
@@ -558,9 +603,17 @@ document.addEventListener('DOMContentLoaded', function() {
         const scrollPercentage = (scrollTop / (documentHeight - windowHeight)) * 100;
         
         if (progressBar) {
-            progressBar.style.height = scrollPercentage + '%';
+            progressBar.style.height = Math.min(scrollPercentage, 100) + '%';
         }
     });
+    
+    // Set initial active state
+    if (window.location.hash) {
+        const initialSection = window.location.hash.substring(1);
+        updateActiveLink(initialSection);
+    } else if (sections.length > 0) {
+        updateActiveLink(sections[0].id);
+    }
 });
 
 // Scroll to Top functionality
