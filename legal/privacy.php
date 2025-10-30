@@ -31,21 +31,24 @@ include '../includes/header.php';
 
 <section class="legal-content-section">
     <div class="container">
-        <div class="row">
-            <div class="col-lg-12">
-                <div class="legal-container">
-                    <!-- Quick Navigation -->
+        <div class="legal-container">
+            <div class="legal-layout">
+                <!-- Sidebar Table of Contents -->
+                <aside class="legal-sidebar-toc" id="sidebarToc">
+                    <div class="toc-progress-bar" id="tocProgress"></div>
+                    <h5><i class="bi bi-list-ul"></i> Contents</h5>
+                    <ul class="legal-toc-list" id="tocList">
+                        <!-- Will be populated dynamically -->
+                    </ul>
+                </aside>
+
+                <!-- Main Content -->
+                <div class="legal-main-content">
+                    <!-- Mobile Quick Navigation (Fallback) -->
                     <div class="legal-quick-nav">
                         <h5><i class="bi bi-list-ul"></i> Quick Navigation</h5>
-                        <ul>
-                            <li><a href="#introduction"><i class="bi bi-chevron-right"></i> Introduction</a></li>
-                            <li><a href="#information-collection"><i class="bi bi-chevron-right"></i> Information We Collect</a></li>
-                            <li><a href="#usage"><i class="bi bi-chevron-right"></i> How We Use Information</a></li>
-                            <li><a href="#sharing"><i class="bi bi-chevron-right"></i> Information Sharing</a></li>
-                            <li><a href="#security"><i class="bi bi-chevron-right"></i> Data Security</a></li>
-                            <li><a href="#cookies"><i class="bi bi-chevron-right"></i> Cookies & Tracking</a></li>
-                            <li><a href="#rights"><i class="bi bi-chevron-right"></i> Your Rights</a></li>
-                            <li><a href="#contact"><i class="bi bi-chevron-right"></i> Contact Us</a></li>
+                        <ul id="mobileNav">
+                            <!-- Will be populated dynamically -->
                         </ul>
                     </div>
 
@@ -301,7 +304,7 @@ include '../includes/header.php';
                     </div>
 
                     <!-- Children's Privacy -->
-                    <div class="legal-section">
+                    <div class="legal-section" id="childrens-privacy">
                         <div class="legal-section-header">
                             <div class="legal-section-icon">
                                 <i class="bi bi-people"></i>
@@ -319,7 +322,7 @@ include '../includes/header.php';
                     </div>
 
                     <!-- Data Retention -->
-                    <div class="legal-section">
+                    <div class="legal-section" id="data-retention">
                         <div class="legal-section-header">
                             <div class="legal-section-icon">
                                 <i class="bi bi-archive"></i>
@@ -371,7 +374,7 @@ include '../includes/header.php';
                     </div>
 
                     <!-- Changes to Policy -->
-                    <div class="legal-section">
+                    <div class="legal-section" id="changes">
                         <div class="legal-section-header">
                             <div class="legal-section-icon">
                                 <i class="bi bi-arrow-repeat"></i>
@@ -469,6 +472,97 @@ include '../includes/header.php';
 </button>
 
 <script>
+// Dynamic Table of Contents Generator
+document.addEventListener('DOMContentLoaded', function() {
+    const sections = document.querySelectorAll('.legal-section');
+    const tocList = document.getElementById('tocList');
+    const mobileNav = document.getElementById('mobileNav');
+    const progressBar = document.getElementById('tocProgress');
+    
+    // Generate TOC items
+    sections.forEach((section, index) => {
+        const id = section.id;
+        const title = section.querySelector('h2').textContent;
+        const icon = section.querySelector('.legal-section-icon i').className;
+        
+        // Create sidebar TOC item
+        const tocItem = document.createElement('li');
+        const tocLink = document.createElement('a');
+        tocLink.href = `#${id}`;
+        tocLink.innerHTML = `<i class="${icon}"></i> ${title}`;
+        tocLink.setAttribute('data-section', id);
+        tocItem.appendChild(tocLink);
+        tocList.appendChild(tocItem);
+        
+        // Create mobile nav item
+        const mobileItem = document.createElement('li');
+        const mobileLink = document.createElement('a');
+        mobileLink.href = `#${id}`;
+        mobileLink.innerHTML = `<i class="bi bi-chevron-right"></i> ${title}`;
+        mobileItem.appendChild(mobileLink);
+        mobileNav.appendChild(mobileItem);
+    });
+    
+    // Smooth scroll for TOC links
+    document.querySelectorAll('.legal-toc-list a, .legal-quick-nav a').forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const targetId = this.getAttribute('href');
+            const targetElement = document.querySelector(targetId);
+            if (targetElement) {
+                targetElement.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+                
+                // Update URL without scrolling
+                history.pushState(null, null, targetId);
+            }
+        });
+    });
+    
+    // Intersection Observer for active section highlighting
+    const observerOptions = {
+        root: null,
+        rootMargin: '-100px 0px -66%',
+        threshold: 0
+    };
+    
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                // Remove active class from all links
+                document.querySelectorAll('.legal-toc-list a').forEach(link => {
+                    link.classList.remove('active');
+                });
+                
+                // Add active class to current section link
+                const activeLink = document.querySelector(`.legal-toc-list a[data-section="${entry.target.id}"]`);
+                if (activeLink) {
+                    activeLink.classList.add('active');
+                }
+            }
+        });
+    }, observerOptions);
+    
+    // Observe all sections
+    sections.forEach(section => {
+        observer.observe(section);
+    });
+    
+    // Update progress bar on scroll
+    window.addEventListener('scroll', function() {
+        const windowHeight = window.innerHeight;
+        const documentHeight = document.documentElement.scrollHeight;
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        const scrollPercentage = (scrollTop / (documentHeight - windowHeight)) * 100;
+        
+        if (progressBar) {
+            progressBar.style.height = scrollPercentage + '%';
+        }
+    });
+});
+
 // Scroll to Top functionality
 window.onscroll = function() {
     const scrollBtn = document.getElementById('scrollTopBtn');
@@ -485,21 +579,6 @@ function scrollToTop() {
         behavior: 'smooth'
     });
 }
-
-// Smooth scroll for navigation links
-document.querySelectorAll('.legal-quick-nav a').forEach(link => {
-    link.addEventListener('click', function(e) {
-        e.preventDefault();
-        const targetId = this.getAttribute('href');
-        const targetElement = document.querySelector(targetId);
-        if (targetElement) {
-            targetElement.scrollIntoView({
-                behavior: 'smooth',
-                block: 'start'
-            });
-        }
-    });
-});
 </script>
 
 <?php include '../includes/footer.php'; ?>
