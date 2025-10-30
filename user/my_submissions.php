@@ -203,7 +203,7 @@ include '../includes/header.php';
                         <div class="submission-status">
                             <?php if ($submission['competition_status'] === 'active'): ?>
                                 <span class="status-badge status-active">
-                                    <i class="bi bi-hourglass-split"></i> Under Review
+                                    <i class="bi bi-hourglass-split"></i> Competition Ongoing
                                 </span>
                             <?php else: ?>
                                 <span class="status-badge status-closed">

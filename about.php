@@ -83,28 +83,28 @@ $stats['downloads'] = $result->fetch_assoc()['total'] ?? 0;
         <div class="row text-center">
             <div class="col-lg-3 col-md-6 mb-4 mb-lg-0">
                 <div class="stat-card">
-                    <div class="stat-icon"><i class="bi bi-book"></i></div>
+                    <div class="stat-icon"><i class="bi bi-book" style="color: white !important;"></i></div>
                     <h3 class="stat-number" data-count="<?php echo $stats['books']; ?>">0</h3>
                     <p class="stat-label">Books Available</p>
                 </div>
             </div>
             <div class="col-lg-3 col-md-6 mb-4 mb-lg-0">
                 <div class="stat-card">
-                    <div class="stat-icon"><i class="bi bi-person"></i></div>
+                    <div class="stat-icon"><i class="bi bi-person" style="color: white !important;"></i></div>
                     <h3 class="stat-number" data-count="<?php echo $stats['users']; ?>">0</h3>
                     <p class="stat-label">Active Users</p>
                 </div>
             </div>
             <div class="col-lg-3 col-md-6 mb-4 mb-lg-0">
                 <div class="stat-card">
-                    <div class="stat-icon"><i class="bi bi-trophy"></i></div>
+                    <div class="stat-icon"><i class="bi bi-trophy" style="color: white !important;"></i></div>
                     <h3 class="stat-number" data-count="<?php echo $stats['competitions']; ?>">0</h3>
                     <p class="stat-label">Competitions</p>
                 </div>
             </div>
             <div class="col-lg-3 col-md-6">
                 <div class="stat-card">
-                    <div class="stat-icon"><i class="bi bi-download"></i></div>
+                    <div class="stat-icon"><i class="bi bi-download" style="color: white !important;"></i></div>
                     <h3 class="stat-number" data-count="<?php echo $stats['downloads']; ?>">0</h3>
                     <p class="stat-label">Downloads</p>
                 </div>
@@ -117,7 +117,7 @@ $stats['downloads'] = $result->fetch_assoc()['total'] ?? 0;
     <section class="about-values py-5 bg-white">
         <div class="container">
             <div class="text-center mb-5">
-                <span class="section-label">What We Stand For</span>
+                <span class="section-label">What We Stand For</span><br>
                 <h2 class="section-title mb-3">Our Core Values</h2>
                 <p class="text-muted">The principles that guide everything we do</p>
             </div>
@@ -196,7 +196,7 @@ $stats['downloads'] = $result->fetch_assoc()['total'] ?? 0;
     <section class="about-team py-5">
         <div class="container">
             <div class="text-center mb-5">
-                <span class="section-label">The People Behind It</span>
+                <span class="section-label">The People Behind It</span><br>
                 <h2 class="section-title mb-3">Meet Our Team</h2>
                 <p class="text-muted">Passionate individuals working to bring you the best e-book experience</p>
             </div>

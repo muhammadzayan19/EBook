@@ -168,7 +168,7 @@ include '../includes/admin_header.php';
                     </p>
                 </div>
                 <div class="header-actions">
-                    <a href="manage_competitions.php" class="btn-filter" style="background: #f8fafc; color: var(--admin-primary); border: 2px solid #e2e8f0;">
+                    <a href="manage_competitions.php" class="btn-filter" style="text-decoration: none;">
                         <i class="bi bi-arrow-left"></i> Back to Competitions
                     </a>
                 </div>
@@ -482,7 +482,7 @@ include '../includes/admin_header.php';
                                                 <div class="action-buttons">
                                                     <a href="../<?php echo htmlspecialchars($sub['file_path']); ?>" 
                                                        class="btn-table-action btn-view" target="_blank" title="View Submission">
-                                                        <i class="bi bi-eye"></i>
+                                                        <i class="bi bi-download"></i>
                                                     </a>
                                                 </div>
                                             </td>

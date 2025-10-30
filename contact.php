@@ -1,28 +1,8 @@
 <?php
 $page_title = "Contact Us";
 
+require_once 'config/db.php';
 include 'includes/header.php';
-
-$success_message = '';
-$error_message = '';
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $name = trim($_POST['name'] ?? '');
-    $email = trim($_POST['email'] ?? '');
-    $phone = trim($_POST['phone'] ?? '');
-    $subject = trim($_POST['subject'] ?? '');
-    $message = trim($_POST['message'] ?? '');
-    
-    if (empty($name) || empty($email) || empty($subject) || empty($message)) {
-        $error_message = 'Please fill in all required fields.';
-    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $error_message = 'Please enter a valid email address.';
-    } else {
-        $success_message = 'Thank you for contacting us! We will get back to you within 24 hours.';
-        
-        $name = $email = $phone = $subject = $message = '';
-    }
-}
 ?>
 
     <!-- Page Header -->
@@ -109,26 +89,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <p class="text-muted">Fill out the form below and our team will get back to you within 24 hours.</p>
                         </div>
 
-                        <?php if ($success_message): ?>
-                        <div class="alert alert-success alert-dismissible fade show" role="alert">
-                            <i class="bi bi-check-circle me-2"></i><?php echo $success_message; ?>
-                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                        </div>
-                        <?php endif; ?>
-
-                        <?php if ($error_message): ?>
-                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                            <i class="bi bi-exclamation-triangle me-2"></i><?php echo $error_message; ?>
-                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                        </div>
-                        <?php endif; ?>
-
-                        <form method="POST" action="" class="contact-form needs-validation" novalidate>
+                        <form id="contactForm" class="contact-form">
                             <div class="row">
                                 <div class="col-md-6 mb-4">
                                     <div class="form-floating">
                                         <input type="text" class="form-control" id="name" name="name" 
-                                               placeholder="Your Name" value="<?php echo htmlspecialchars($name ?? ''); ?>" required>
+                                               placeholder="Your Name" required>
                                         <label for="name"><i class="bi bi-person me-2"></i>Your Name *</label>
                                         <div class="invalid-feedback">
                                             Please enter your name.
@@ -138,7 +104,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <div class="col-md-6 mb-4">
                                     <div class="form-floating">
                                         <input type="email" class="form-control" id="email" name="email" 
-                                               placeholder="Your Email" value="<?php echo htmlspecialchars($email ?? ''); ?>" required>
+                                               placeholder="Your Email" required>
                                         <label for="email"><i class="bi bi-envelope me-2"></i>Your Email *</label>
                                         <div class="invalid-feedback">
                                             Please enter a valid email address.
@@ -150,7 +116,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <div class="col-md-6 mb-4">
                                     <div class="form-floating">
                                         <input type="tel" class="form-control" id="phone" name="phone" 
-                                               placeholder="Phone Number" value="<?php echo htmlspecialchars($phone ?? ''); ?>">
+                                               placeholder="Phone Number">
                                         <label for="phone"><i class="bi bi-telephone me-2"></i>Phone Number</label>
                                     </div>
                                 </div>
@@ -158,12 +124,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     <div class="form-floating">
                                         <select class="form-select" id="subject" name="subject" required>
                                             <option value="" selected disabled>Subject</option>
-                                            <option value="general" <?php echo (isset($subject) && $subject === 'general') ? 'selected' : ''; ?>>General Inquiry</option>
-                                            <option value="technical" <?php echo (isset($subject) && $subject === 'technical') ? 'selected' : ''; ?>>Technical Support</option>
-                                            <option value="billing" <?php echo (isset($subject) && $subject === 'billing') ? 'selected' : ''; ?>>Billing & Payment</option>
-                                            <option value="competition" <?php echo (isset($subject) && $subject === 'competition') ? 'selected' : ''; ?>>Competition Query</option>
-                                            <option value="partnership" <?php echo (isset($subject) && $subject === 'partnership') ? 'selected' : ''; ?>>Partnership Opportunity</option>
-                                            <option value="other" <?php echo (isset($subject) && $subject === 'other') ? 'selected' : ''; ?>>Other</option>
+                                            <option value="general">General Inquiry</option>
+                                            <option value="technical">Technical Support</option>
+                                            <option value="billing">Billing & Payment</option>
+                                            <option value="competition">Competition Query</option>
+                                            <option value="partnership">Partnership Opportunity</option>
+                                            <option value="other">Other</option>
                                         </select>
                                         <div class="invalid-feedback">
                                             Please select a subject.
@@ -174,17 +140,99 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <div class="mb-4">
                                 <div class="form-floating">
                                     <textarea class="form-control" id="message" name="message" 
-                                              placeholder="Your Message" style="height: 180px" required><?php echo htmlspecialchars($message ?? ''); ?></textarea>
+                                              placeholder="Your Message" style="height: 180px" required></textarea>
                                     <label for="message"><i class="bi bi-chat-dots me-2"></i>Your Message *</label>
                                     <div class="invalid-feedback">
-                                        Please enter your message.
+                                        Please enter your message (minimum 10 characters).
                                     </div>
                                 </div>
                             </div>
-                            <button type="submit" class="btn btn-primary btn-lg w-100">
+                            <button type="submit" class="btn btn-primary btn-lg w-100" id="submitBtn">
                                 <i class="bi bi-send me-2"></i>Send Message
                             </button>
                         </form>
+
+                        <script>
+                        document.getElementById('contactForm').addEventListener('submit', function(e) {
+                            e.preventDefault();
+                            
+                            const form = this;
+                            const submitBtn = document.getElementById('submitBtn');
+                            
+                            // Get form values
+                            const name = document.getElementById('name').value.trim();
+                            const email = document.getElementById('email').value.trim();
+                            const subject = document.getElementById('subject').value.trim();
+                            const message = document.getElementById('message').value.trim();
+                            
+                            // Client-side validation
+                            if (!name || !email || !subject || !message) {
+                                alert('Please fill in all required fields.');
+                                return;
+                            }
+                            
+                            if (message.length < 10) {
+                                alert('Message must be at least 10 characters long.');
+                                return;
+                            }
+                            
+                            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                            if (!emailRegex.test(email)) {
+                                alert('Please enter a valid email address.');
+                                return;
+                            }
+                            
+                            const formData = new FormData(form);
+                            
+                            // Disable submit button
+                            submitBtn.disabled = true;
+                            submitBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Sending...';
+                            
+                            // Send AJAX request
+                            fetch('includes/handle_contact.php', {
+                                method: 'POST',
+                                body: formData
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                // Re-enable submit button
+                                submitBtn.disabled = false;
+                                submitBtn.innerHTML = '<i class="bi bi-send me-2"></i>Send Message';
+                                
+                                if (data.success) {
+                                    // Show success message
+                                    const alertDiv = document.createElement('div');
+                                    alertDiv.className = 'alert alert-success alert-dismissible fade show';
+                                    alertDiv.innerHTML = `
+                                        <i class="bi bi-check-circle me-2"></i>${data.message}
+                                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                    `;
+                                    form.parentElement.insertBefore(alertDiv, form);
+                                    
+                                    // Clear form
+                                    form.reset();
+                                    
+                                    // Remove alert after 5 seconds
+                                    setTimeout(() => alertDiv.remove(), 5000);
+                                } else {
+                                    // Show error message
+                                    const alertDiv = document.createElement('div');
+                                    alertDiv.className = 'alert alert-danger alert-dismissible fade show';
+                                    alertDiv.innerHTML = `
+                                        <i class="bi bi-exclamation-triangle me-2"></i>${data.message}
+                                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                    `;
+                                    form.parentElement.insertBefore(alertDiv, form);
+                                }
+                            })
+                            .catch(error => {
+                                submitBtn.disabled = false;
+                                submitBtn.innerHTML = '<i class="bi bi-send me-2"></i>Send Message';
+                                alert('An error occurred. Please try again.');
+                                console.error('Error:', error);
+                            });
+                        });
+                        </script>
                     </div>
                 </div>
 
@@ -268,7 +316,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <section class="contact-faq-section py-5 bg-white">
         <div class="container">
             <div class="text-center mb-5">
-                <span class="section-label">FAQ</span>
+                <span class="section-label">FAQ</span><br>
                 <h2 class="section-title mb-3">Frequently Asked Questions</h2>
                 <p class="text-muted">Quick answers to common questions about our platform</p>
             </div>

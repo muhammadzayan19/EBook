@@ -30,11 +30,19 @@ $tables = [
     registered_at DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;",
 
-"CREATE TABLE IF NOT EXISTS admins (
+"CREATE TABLE IF NOT EXISTS admin_users (
     admin_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
     username VARCHAR(50) UNIQUE NOT NULL,
-    password VARCHAR(255) NOT NULL
-) ENGINE=InnoDB;",
+    password VARCHAR(255) NOT NULL,
+    role ENUM('super_admin','admin','moderator','editor') DEFAULT 'admin',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    last_login DATETIME NULL,
+    INDEX idx_username (username),
+    INDEX idx_email (email),
+    INDEX idx_role (role)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;",
 
 "CREATE TABLE IF NOT EXISTS books (
     book_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -176,6 +184,54 @@ $tables = [
     INDEX `idx_status` (`status`),
     INDEX `idx_active` (`user_id`, `status`, `end_date`),
     FOREIGN KEY (`user_id`) REFERENCES `users`(`user_id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;",
+
+"CREATE TABLE IF NOT EXISTS contacts (
+    contact_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(100) NOT NULL,
+    phone VARCHAR(15),
+    subject VARCHAR(100) NOT NULL,
+    message TEXT NOT NULL,
+    status ENUM('new','read','replied','closed') DEFAULT 'new',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    replied_at DATETIME NULL,
+    admin_notes TEXT NULL,
+    INDEX idx_status (status),
+    INDEX idx_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;",
+
+"CREATE TABLE IF NOT EXISTS book_reviews (
+    review_id INT AUTO_INCREMENT PRIMARY KEY,
+    book_id INT NOT NULL,
+    user_id INT NOT NULL,
+    rating INT NOT NULL CHECK (rating >= 1 AND rating <= 5),
+    review_text TEXT,
+    helpful_count INT DEFAULT 0,
+    status ENUM('pending','approved','rejected') DEFAULT 'pending',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (book_id) REFERENCES books(book_id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    UNIQUE KEY unique_review (book_id, user_id),
+    INDEX idx_book_rating (book_id, rating),
+    INDEX idx_status (status),
+    INDEX idx_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;",
+
+"CREATE TABLE IF NOT EXISTS review_ratings_summary (
+    summary_id INT AUTO_INCREMENT PRIMARY KEY,
+    book_id INT NOT NULL,
+    total_reviews INT DEFAULT 0,
+    average_rating DECIMAL(3,2) DEFAULT 0,
+    five_star INT DEFAULT 0,
+    four_star INT DEFAULT 0,
+    three_star INT DEFAULT 0,
+    two_star INT DEFAULT 0,
+    one_star INT DEFAULT 0,
+    last_updated DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (book_id) REFERENCES books(book_id) ON DELETE CASCADE,
+    UNIQUE KEY unique_book (book_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;"
 ];
 
@@ -258,15 +314,18 @@ foreach ($indexes as $index_query) {
 }
 
 // Create default admin account
-$admin_check = $conn->query("SELECT * FROM admins WHERE username='admin'");
+$admin_check = $conn->query("SELECT * FROM admin_users WHERE username='admin'");
 if ($admin_check->num_rows == 0) {
     $hashed = password_hash('admin123', PASSWORD_BCRYPT);
-    $stmt = $conn->prepare("INSERT INTO admins (username, password) VALUES (?, ?)");
+    $stmt = $conn->prepare("INSERT INTO admin_users (name, email, username, password, role, created_at) VALUES (?, ?, ?, ?, ?, NOW())");
+    $admin_name = 'Super Administrator';
+    $admin_email = 'admin@ebook.com';
     $admin_user = 'admin';
-    $stmt->bind_param("ss", $admin_user, $hashed);
+    $admin_role = 'super_admin';
+    $stmt->bind_param("sssss", $admin_name, $admin_email, $admin_user, $hashed, $admin_role);
     $stmt->execute();
     $stmt->close();
-    echo "<br>👑 Default admin created — username: <b>admin</b>, password: <b>admin123</b><br>";
+    echo "<br>👑 Default super admin created — username: <b>admin</b>, password: <b>admin123</b>, email: <b>admin@ebook.com</b><br>";
 }
 
 // Create sample competition if none exists

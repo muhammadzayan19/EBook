@@ -9,6 +9,15 @@ function isActiveSidebar($page) {
     global $current_page;
     return ($current_page === $page) ? 'active' : '';
 }
+$is_super_admin = false;
+if (isset($_SESSION['admin_id'])) {
+    require_once __DIR__ . '/../config/db.php';
+    $admin_id = $_SESSION['admin_id'];
+    $check_role = mysqli_query($conn, "SELECT role FROM admin_users WHERE admin_id = $admin_id");
+    if ($check_role && $role_data = mysqli_fetch_assoc($check_role)) {
+        $is_super_admin = ($role_data['role'] === 'super_admin');
+    }
+}
 ?>
 
 <aside class="admin-sidebar" id="adminSidebar">
@@ -69,6 +78,14 @@ function isActiveSidebar($page) {
                     <span>Payments</span>
                 </a>
             </li>
+            <?php if ($is_super_admin): ?>
+                <li class="nav-item <?php echo isActiveSidebar('manage_staff.php'); ?>">
+                    <a href="manage_staff.php" class="nav-link">
+                        <i class="bi bi-shield-lock"></i>
+                        <span>Manage Staff</span>
+                    </a>
+                </li>
+            <?php endif; ?>
             <li class="nav-item <?php echo isActiveSidebar('settings.php'); ?>">
                 <a href="settings.php" class="nav-link">
                     <i class="bi bi-gear"></i>

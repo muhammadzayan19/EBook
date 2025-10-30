@@ -25,7 +25,7 @@ function getSetting($conn, $key, $default = '') {
 
 // Get current admin info
 $current_username = $_SESSION['admin_username'];
-$query = "SELECT * FROM admins WHERE username = '$current_username'";
+$query = "SELECT * FROM admin_users WHERE username = '$current_username'";
 $result = mysqli_query($conn, $query);
 $admin = mysqli_fetch_assoc($result);
 

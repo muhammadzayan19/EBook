@@ -72,7 +72,7 @@ $winners_result = $conn->query("
                             <?php echo ucfirst($single_competition['type']); ?> Competition
                         </span>
                         <span class="competition-status-large">
-                            <i class="bi bi-circle-fill pulse-dot"></i> Active
+                            Active
                         </span>
                     </div>
                     
@@ -136,7 +136,7 @@ $winners_result = $conn->query("
                                 You have already submitted your entry for this competition!
                             </div>
                         <?php else: ?>
-                            <a href="upload_essay.php?comp_id=<?php echo $comp_id; ?>" class="btn btn-primary btn-lg w-100">
+                            <a href="write_essay.php?comp_id=<?php echo $comp_id; ?>" class="btn btn-primary btn-lg w-100">
                                 <i class="bi bi-pencil-square me-2"></i>Start Writing Now
                             </a>
                         <?php endif; ?>
@@ -226,7 +226,7 @@ setInterval(updateCountdown, 60000);
     <div class="container">
         <div class="row mb-5">
             <div class="col-lg-8 mx-auto text-center">
-                <span class="section-label">Compete & Win</span>
+                <span class="section-label">Compete & Win</span><br>
                 <h2 class="section-title mb-3">Active Competitions</h2>
                 <p class="text-muted">Join our writing competitions, showcase your talent, and win exciting prizes</p>
             </div>
@@ -244,7 +244,7 @@ setInterval(updateCountdown, 60000);
                             <?php echo ucfirst($competition['type']); ?>
                         </span>
                         <span class="competition-status-badge">
-                            <i class="bi bi-circle-fill pulse-dot"></i> Active
+                            Active
                         </span>
                     </div>
                     
@@ -295,7 +295,7 @@ setInterval(updateCountdown, 60000);
     <div class="container">
         <div class="row mb-4">
             <div class="col-lg-8 mx-auto text-center">
-                <span class="section-label">Hall of Fame</span>
+                <span class="section-label">Hall of Fame</span><br>
                 <h2 class="section-title mb-3">Recent Winners</h2>
                 <p class="text-muted">Congratulations to our talented winners!</p>
             </div>
@@ -333,7 +333,7 @@ setInterval(updateCountdown, 60000);
     <div class="container">
         <div class="row mb-5">
             <div class="col-lg-8 mx-auto text-center">
-                <span class="section-label">Simple Process</span>
+                <span class="section-label">Simple Process</span><br>
                 <h2 class="section-title mb-3">How It Works</h2>
                 <p class="text-muted">Follow these simple steps to participate in our competitions</p>
             </div>

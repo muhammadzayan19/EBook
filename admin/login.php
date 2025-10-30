@@ -24,16 +24,31 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if (empty($username) || empty($password)) {
         $error = "Please enter both username and password.";
     } else {
-        $query = "SELECT * FROM admins WHERE username = '$username' LIMIT 1";
+        // Try admin_users table first (new structure)
+        $query = "SELECT * FROM admin_users WHERE username = '$username' OR email = '$username' LIMIT 1";
         $result = mysqli_query($conn, $query);
         
-        if (mysqli_num_rows($result) == 1) {
+        // Fallback to admins table if admin_users doesn't exist or no result
+        if (!$result || mysqli_num_rows($result) == 0) {
+            $query = "SELECT * FROM admins WHERE username = '$username' LIMIT 1";
+            $result = mysqli_query($conn, $query);
+        }
+        
+        if ($result && mysqli_num_rows($result) == 1) {
             $admin = mysqli_fetch_assoc($result);
             
             if (password_verify($password, $admin['password'])) {
                 $_SESSION['admin_logged_in'] = true;
                 $_SESSION['admin_id'] = $admin['admin_id'];
                 $_SESSION['admin_username'] = $admin['username'];
+                $_SESSION['admin_name'] = isset($admin['name']) ? $admin['name'] : $admin['username'];
+                $_SESSION['admin_role'] = isset($admin['role']) ? $admin['role'] : 'admin';
+                $_SESSION['admin_email'] = isset($admin['email']) ? $admin['email'] : '';
+                
+                // Update last login if admin_users table
+                if (isset($admin['last_login'])) {
+                    mysqli_query($conn, "UPDATE admin_users SET last_login = NOW() WHERE admin_id = {$admin['admin_id']}");
+                }
                 
                 header("Location: index.php");
                 exit();
@@ -98,7 +113,7 @@ include '../includes/header.php';
                                     autofocus
                                 >
                                 <label for="username">
-                                    <i class="bi bi-person-fill me-2"></i>Username
+                                    <i class="bi bi-person-fill me-2"></i>Username or Email
                                 </label>
                             </div>
                             
