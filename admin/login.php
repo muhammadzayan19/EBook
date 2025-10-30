@@ -28,9 +28,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $query = "SELECT * FROM admin_users WHERE username = '$username' OR email = '$username' LIMIT 1";
         $result = mysqli_query($conn, $query);
         
-        // Fallback to admins table if admin_users doesn't exist or no result
+        // Fallback to admin_users table if admin_users doesn't exist or no result
         if (!$result || mysqli_num_rows($result) == 0) {
-            $query = "SELECT * FROM admins WHERE username = '$username' LIMIT 1";
+            $query = "SELECT * FROM admin_users WHERE username = '$username' LIMIT 1";
             $result = mysqli_query($conn, $query);
         }
         

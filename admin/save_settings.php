@@ -47,7 +47,7 @@ else if (isset($_POST['action']) && $_POST['action'] === 'update_profile') {
         $new_username = mysqli_real_escape_string($conn, $_POST['new_username']);
         $new_email = mysqli_real_escape_string($conn, $_POST['new_email']);
         
-        $query = "UPDATE admins SET username = '$new_username' WHERE username = '$current_username'";
+        $query = "UPDATE admin_users SET username = '$new_username' WHERE username = '$current_username'";
         
         if (mysqli_query($conn, $query)) {
             $_SESSION['admin_username'] = $new_username;
@@ -77,13 +77,13 @@ else if (isset($_POST['action']) && $_POST['action'] === 'change_password') {
             $response = ['success' => false, 'message' => 'Password must be at least 8 characters!'];
         } else {
             $current_username = $_SESSION['admin_username'];
-            $query = "SELECT * FROM admins WHERE username = '$current_username'";
+            $query = "SELECT * FROM admin_users WHERE username = '$current_username'";
             $result = mysqli_query($conn, $query);
             $admin = mysqli_fetch_assoc($result);
             
             if (password_verify($current_password, $admin['password'])) {
                 $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
-                $query = "UPDATE admins SET password = '$hashed_password' WHERE username = '$current_username'";
+                $query = "UPDATE admin_users SET password = '$hashed_password' WHERE username = '$current_username'";
                 
                 if (mysqli_query($conn, $query)) {
                     $response = ['success' => true, 'message' => 'Password changed successfully!'];
