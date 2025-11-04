@@ -5,8 +5,6 @@ require_once '../config/db.php';
 include '../includes/header.php';
 ?>
 
-<link rel="stylesheet" href="../assets/css/terms.css">
-
 <!-- Terms of Service Page -->
 <section class="terms-hero">
     <div class="container">

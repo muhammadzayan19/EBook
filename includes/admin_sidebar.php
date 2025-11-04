@@ -112,4 +112,75 @@ if (isset($_SESSION['admin_id'])) {
     </div>
 </aside>
 
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+    const sidebar = document.getElementById('adminSidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    const toggleBtn = document.querySelector('.btn-toggle-sidebar');
+    const body = document.body;
+    
+    // Toggle sidebar on button click
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            body.classList.toggle('sidebar-open');
+            sidebar.classList.toggle('active');
+            overlay.classList.toggle('active');
+        });
+    }
+    
+    // Close sidebar when clicking overlay
+    if (overlay) {
+        overlay.addEventListener('click', function() {
+            body.classList.remove('sidebar-open');
+            sidebar.classList.remove('active');
+            overlay.classList.remove('active');
+        });
+    }
+    
+    // Close sidebar when clicking a nav link on mobile
+    const navLinks = document.querySelectorAll('.nav-link');
+    navLinks.forEach(function(link) {
+        link.addEventListener('click', function() {
+            if (window.innerWidth <= 992) {
+                body.classList.remove('sidebar-open');
+                sidebar.classList.remove('active');
+                overlay.classList.remove('active');
+            }
+        });
+    });
+    
+    // Handle window resize - close sidebar if opened on mobile and resized to desktop
+    let resizeTimer;
+    window.addEventListener('resize', function() {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(function() {
+            if (window.innerWidth > 992) {
+                body.classList.remove('sidebar-open');
+                sidebar.classList.remove('active');
+                overlay.classList.remove('active');
+            }
+        }, 250);
+    });
+    
+    // Prevent body scroll when sidebar is open on mobile
+    const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            if (mutation.attributeName === 'class') {
+                if (body.classList.contains('sidebar-open')) {
+                    body.style.overflow = 'hidden';
+                } else {
+                    body.style.overflow = '';
+                }
+            }
+        });
+    });
+    
+    observer.observe(body, {
+        attributes: true,
+        attributeFilter: ['class']
+    });
+});
+</script>
+
 <div class="sidebar-overlay" id="sidebarOverlay"></div>

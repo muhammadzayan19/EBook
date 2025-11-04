@@ -1,6 +1,16 @@
 <?php
 $current_page = basename($_SERVER['PHP_SELF']);
+$current_dir = basename(dirname($_SERVER['PHP_SELF']));
+
+// Determine if we're in a subdirectory and which one
 $in_subdirectory = in_array($current_page, ['login.php', 'register.php', 'books.php', 'book_details.php', 'order.php', 'competition.php', 'upload_essay.php', 'profile.php', 'my_orders.php', 'my_submissions.php']) ? '../' : '';
+
+// Check if we're in the legal directory
+$in_legal_dir = ($current_dir === 'legal');
+
+// Set paths based on current directory
+$legal_path = $in_legal_dir ? '' : ($in_subdirectory ? '../legal/' : 'legal/');
+$admin_path = $in_legal_dir ? '../admin/' : ($in_subdirectory ? '../admin/' : 'admin/');
 ?>
 
     <footer class="footer">
@@ -39,9 +49,9 @@ $in_subdirectory = in_array($current_page, ['login.php', 'register.php', 'books.
                     <h6>Support</h6>
                     <ul>
                         <li><a href="<?php echo $in_subdirectory; ?>contact.php">Contact</a></li>
-                        <li><a href="<?php echo $in_subdirectory; ?>legal/privacy.php">Privacy Policy</a></li>
-                        <li><a href="<?php echo $in_subdirectory; ?>legal/terms.php">Terms of Service</a></li>
-                        <li><a href="<?php echo $in_subdirectory; ?>admin/login.php">Admin Portal</a></li>
+                        <li><a href="<?php echo $legal_path; ?>privacy.php">Privacy Policy</a></li>
+                        <li><a href="<?php echo $legal_path; ?>terms.php">Terms of Service</a></li>
+                        <li><a href="<?php echo $admin_path; ?>login.php">Admin Portal</a></li>
                     </ul>
                 </div>
                 
