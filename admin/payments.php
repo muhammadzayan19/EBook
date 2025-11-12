@@ -12,60 +12,92 @@ require_once '../config/db.php';
 
 // Handle Payment Status Update
 if (isset($_POST['update_payment_status'])) {
-    $payment_id = mysqli_real_escape_string($conn, $_POST['payment_id']);
-    $new_status = mysqli_real_escape_string($conn, $_POST['payment_status']);
+    $payment_id = intval($_POST['payment_id']);
+    $new_status = $_POST['payment_status'];
     
-    $query = "UPDATE payments SET payment_status = '$new_status' WHERE payment_id = '$payment_id'";
+    $stmt = $conn->prepare("UPDATE payments SET payment_status = ? WHERE payment_id = ?");
+    $stmt->bind_param("si", $new_status, $payment_id);
     
-    if (mysqli_query($conn, $query)) {
+    if ($stmt->execute()) {
         // If payment is completed, update order status
         if ($new_status === 'completed') {
-            $get_order = "SELECT order_id FROM payments WHERE payment_id = '$payment_id'";
-            $result = mysqli_query($conn, $get_order);
-            $payment = mysqli_fetch_assoc($result);
+            $get_order = $conn->prepare("SELECT order_id FROM payments WHERE payment_id = ?");
+            $get_order->bind_param("i", $payment_id);
+            $get_order->execute();
+            $result = $get_order->get_result();
+            $payment = $result->fetch_assoc();
             
-            mysqli_query($conn, "UPDATE orders SET status = 'paid' WHERE order_id = '" . $payment['order_id'] . "'");
+            if ($payment) {
+                $update_order = $conn->prepare("UPDATE orders SET status = 'paid' WHERE order_id = ?");
+                $update_order->bind_param("i", $payment['order_id']);
+                $update_order->execute();
+                $update_order->close();
+            }
+            $get_order->close();
         }
         
-        $success_message = "Payment status updated successfully!";
+        $_SESSION['success_message'] = "Payment status updated successfully!";
     } else {
-        $error_message = "Failed to update payment status.";
+        $_SESSION['error_message'] = "Failed to update payment status.";
     }
+    $stmt->close();
+    
+    header("Location: payments.php");
+    exit();
 }
 
 // Handle Payment Deletion
 if (isset($_POST['delete_payment'])) {
-    $payment_id = mysqli_real_escape_string($conn, $_POST['payment_id']);
+    $payment_id = intval($_POST['payment_id']);
     
-    $query = "DELETE FROM payments WHERE payment_id = '$payment_id'";
+    $stmt = $conn->prepare("DELETE FROM payments WHERE payment_id = ?");
+    $stmt->bind_param("i", $payment_id);
     
-    if (mysqli_query($conn, $query)) {
-        $success_message = "Payment record deleted successfully!";
+    if ($stmt->execute()) {
+        $_SESSION['success_message'] = "Payment record deleted successfully!";
     } else {
-        $error_message = "Failed to delete payment record.";
+        $_SESSION['error_message'] = "Failed to delete payment record.";
     }
+    $stmt->close();
+    
+    header("Location: payments.php");
+    exit();
 }
 
 // Pagination
 $limit = 15;
-$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+$page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
 $offset = ($page - 1) * $limit;
 
 // Filters
-$status_filter = isset($_GET['status']) ? mysqli_real_escape_string($conn, $_GET['status']) : '';
-$method_filter = isset($_GET['method']) ? mysqli_real_escape_string($conn, $_GET['method']) : '';
-$search = isset($_GET['search']) ? mysqli_real_escape_string($conn, $_GET['search']) : '';
+$status_filter = isset($_GET['status']) ? $_GET['status'] : '';
+$method_filter = isset($_GET['method']) ? $_GET['method'] : '';
+$search = isset($_GET['search']) ? trim($_GET['search']) : '';
 
-// Build query with filters
+// Build query with filters using prepared statements
 $where_conditions = [];
-if ($status_filter) {
-    $where_conditions[] = "p.payment_status = '$status_filter'";
+$params = [];
+$types = "";
+
+if ($status_filter !== '') {
+    $where_conditions[] = "p.payment_status = ?";
+    $params[] = $status_filter;
+    $types .= "s";
 }
-if ($method_filter) {
-    $where_conditions[] = "p.payment_method = '$method_filter'";
+
+if ($method_filter !== '') {
+    $where_conditions[] = "p.payment_method = ?";
+    $params[] = $method_filter;
+    $types .= "s";
 }
-if ($search) {
-    $where_conditions[] = "(u.full_name LIKE '%$search%' OR u.email LIKE '%$search%' OR p.payment_id LIKE '%$search%')";
+
+if ($search !== '') {
+    $search_param = "%$search%";
+    $where_conditions[] = "(u.full_name LIKE ? OR u.email LIKE ? OR CAST(p.payment_id AS CHAR) LIKE ?)";
+    $params[] = $search_param;
+    $params[] = $search_param;
+    $params[] = $search_param;
+    $types .= "sss";
 }
 
 $where_clause = !empty($where_conditions) ? "WHERE " . implode(" AND ", $where_conditions) : "";
@@ -75,8 +107,19 @@ $count_query = "SELECT COUNT(*) as total FROM payments p
                 JOIN orders o ON p.order_id = o.order_id
                 JOIN users u ON o.user_id = u.user_id
                 $where_clause";
-$count_result = mysqli_query($conn, $count_query);
-$total_records = mysqli_fetch_assoc($count_result)['total'];
+
+if (!empty($params)) {
+    $count_stmt = $conn->prepare($count_query);
+    $count_stmt->bind_param($types, ...$params);
+    $count_stmt->execute();
+    $count_result = $count_stmt->get_result();
+    $total_records = $count_result->fetch_assoc()['total'];
+    $count_stmt->close();
+} else {
+    $count_result = mysqli_query($conn, $count_query);
+    $total_records = mysqli_fetch_assoc($count_result)['total'];
+}
+
 $total_pages = ceil($total_records / $limit);
 
 // Fetch payments with details
@@ -89,15 +132,29 @@ $query = "SELECT p.*, o.order_id, o.user_id, o.total_amount as order_total, o.st
           JOIN books b ON o.book_id = b.book_id
           $where_clause
           ORDER BY p.payment_date DESC
-          LIMIT $limit OFFSET $offset";
+          LIMIT ? OFFSET ?";
 
-$payments_result = mysqli_query($conn, $query);
+$stmt = $conn->prepare($query);
+$all_params = $params;
+$all_params[] = $limit;
+$all_params[] = $offset;
+$all_types = $types . "ii";
+
+if (!empty($params)) {
+    $stmt->bind_param($all_types, ...$all_params);
+} else {
+    $stmt->bind_param("ii", $limit, $offset);
+}
+
+$stmt->execute();
+$payments_result = $stmt->get_result();
+$stmt->close();
 
 // Get statistics
 $stats_query = "SELECT 
     COUNT(*) as total_payments,
-    SUM(CASE WHEN payment_status = 'completed' THEN amount ELSE 0 END) as total_revenue,
-    SUM(CASE WHEN payment_status = 'pending' THEN amount ELSE 0 END) as pending_amount,
+    COALESCE(SUM(CASE WHEN payment_status = 'completed' THEN amount ELSE 0 END), 0) as total_revenue,
+    COALESCE(SUM(CASE WHEN payment_status = 'pending' THEN amount ELSE 0 END), 0) as pending_amount,
     COUNT(CASE WHEN payment_status = 'completed' THEN 1 END) as completed_count,
     COUNT(CASE WHEN payment_status = 'pending' THEN 1 END) as pending_count,
     COUNT(CASE WHEN payment_status = 'failed' THEN 1 END) as failed_count
@@ -117,6 +174,11 @@ $monthly_query = "SELECT
     LIMIT 6";
 
 $monthly_result = mysqli_query($conn, $monthly_query);
+
+// Get success/error messages and clear them
+$success_message = isset($_SESSION['success_message']) ? $_SESSION['success_message'] : '';
+$error_message = isset($_SESSION['error_message']) ? $_SESSION['error_message'] : '';
+unset($_SESSION['success_message'], $_SESSION['error_message']);
 
 include '../includes/admin_header.php';
 ?>
@@ -149,17 +211,17 @@ include '../includes/admin_header.php';
         <!-- Payments Content -->
         <div class="admin-content">
             <!-- Alert Messages -->
-            <?php if (isset($success_message)): ?>
+            <?php if (!empty($success_message)): ?>
                 <div class="alert alert-success">
                     <i class="bi bi-check-circle-fill"></i>
-                    <span><?php echo $success_message; ?></span>
+                    <span><?php echo htmlspecialchars($success_message); ?></span>
                 </div>
             <?php endif; ?>
             
-            <?php if (isset($error_message)): ?>
+            <?php if (!empty($error_message)): ?>
                 <div class="alert alert-danger">
                     <i class="bi bi-exclamation-triangle-fill"></i>
-                    <span><?php echo $error_message; ?></span>
+                    <span><?php echo htmlspecialchars($error_message); ?></span>
                 </div>
             <?php endif; ?>
             
@@ -227,27 +289,32 @@ include '../includes/admin_header.php';
                     <span class="record-count"><?php echo number_format($total_records); ?> total</span>
                 </div>
                 <div class="toolbar-right">
-                    <form method="GET" class="filter-form">
+                    <form method="GET" class="filter-form" id="filterForm">
                         <div class="form-group-inline">
-                            <select name="status" class="filter-select" onchange="this.form.submit()">
+                            <select name="status" class="filter-select" onchange="document.getElementById('filterForm').submit()">
                                 <option value="">All Status</option>
                                 <option value="pending" <?php echo $status_filter === 'pending' ? 'selected' : ''; ?>>Pending</option>
                                 <option value="completed" <?php echo $status_filter === 'completed' ? 'selected' : ''; ?>>Completed</option>
                                 <option value="failed" <?php echo $status_filter === 'failed' ? 'selected' : ''; ?>>Failed</option>
                             </select>
                             
-                            <select name="method" class="filter-select" onchange="this.form.submit()">
+                            <select name="method" class="filter-select" onchange="document.getElementById('filterForm').submit()">
                                 <option value="">All Methods</option>
                                 <option value="credit_card" <?php echo $method_filter === 'credit_card' ? 'selected' : ''; ?>>Credit Card</option>
-                                <option value="dd" <?php echo $method_filter === 'dd' ? 'selected' : ''; ?>>DD</option>
-                                <option value="cheque" <?php echo $method_filter === 'cheque' ? 'selected' : ''; ?>>Cheque</option>
-                                <option value="vpp" <?php echo $method_filter === 'vpp' ? 'selected' : ''; ?>>VPP</option>
+                                <option value="paypal" <?php echo $method_filter === 'paypal' ? 'selected' : ''; ?>>PayPal</option>
+                                <option value="bank_transfer" <?php echo $method_filter === 'bank_transfer' ? 'selected' : ''; ?>>Bank Transfer</option>
+                                <option value="cod" <?php echo $method_filter === 'cod' ? 'selected' : ''; ?>>Cash on Delivery</option>
+                                <option value="debit_card" <?php echo $method_filter === 'debit_card' ? 'selected' : ''; ?>>Debit Card</option>
                             </select>
                             
                             <div class="search-box">
                                 <i class="bi bi-search"></i>
-                                <input type="text" name="search" placeholder="Search by name, email..." value="<?php echo htmlspecialchars($search); ?>">
+                                <input type="text" name="search" placeholder="Search by name, email, ID..." value="<?php echo htmlspecialchars($search); ?>">
                             </div>
+                            
+                            <button type="submit" class="btn-search" title="Search">
+                                <i class="bi bi-search"></i>
+                            </button>
                             
                             <?php if ($status_filter || $method_filter || $search): ?>
                                 <a href="payments.php" class="btn-clear-filter">
@@ -276,8 +343,8 @@ include '../includes/admin_header.php';
                             </tr>
                         </thead>
                         <tbody>
-                            <?php if (mysqli_num_rows($payments_result) > 0): ?>
-                                <?php while ($payment = mysqli_fetch_assoc($payments_result)): ?>
+                            <?php if ($payments_result->num_rows > 0): ?>
+                                <?php while ($payment = $payments_result->fetch_assoc()): ?>
                                     <tr>
                                         <td>
                                             <span class="payment-id">#<?php echo $payment['payment_id']; ?></span>
@@ -295,8 +362,20 @@ include '../includes/admin_header.php';
                                             <span class="amount">$<?php echo number_format($payment['amount'], 2); ?></span>
                                         </td>
                                         <td>
+                                            <?php
+                                            $method_display = [
+                                                'credit_card' => 'Credit Card',
+                                                'paypal' => 'PayPal',
+                                                'bank_transfer' => 'Bank Transfer',
+                                                'cod' => 'Cash on Delivery',
+                                                'debit_card' => 'Debit Card'
+                                            ];
+                                            $method_name = isset($method_display[$payment['payment_method']]) 
+                                                ? $method_display[$payment['payment_method']] 
+                                                : ucfirst(str_replace('_', ' ', $payment['payment_method']));
+                                            ?>
                                             <span class="payment-method method-<?php echo $payment['payment_method']; ?>">
-                                                <?php echo strtoupper(str_replace('_', ' ', $payment['payment_method'])); ?>
+                                                <?php echo $method_name; ?>
                                             </span>
                                         </td>
                                         <td>
@@ -312,7 +391,7 @@ include '../includes/admin_header.php';
                                         </td>
                                         <td>
                                             <div class="action-buttons">
-                                                <button class="btn-action btn-view" onclick="viewPayment(<?php echo $payment['payment_id']; ?>)" title="View Details">
+                                                <button class="btn-action btn-view" onclick="viewPayment(<?php echo $payment['payment_id']; ?>, '<?php echo htmlspecialchars($payment['full_name'], ENT_QUOTES); ?>', '<?php echo htmlspecialchars($payment['book_title'], ENT_QUOTES); ?>', '<?php echo $payment['amount']; ?>', '<?php echo $method_name; ?>', '<?php echo date('M d, Y h:i A', strtotime($payment['payment_date'])); ?>', '<?php echo ucfirst($payment['payment_status']); ?>')" title="View Details">
                                                     <i class="bi bi-eye"></i>
                                                 </button>
                                                 <button class="btn-action btn-edit" onclick="openUpdateModal(<?php echo $payment['payment_id']; ?>, '<?php echo $payment['payment_status']; ?>')" title="Update Status">
@@ -345,20 +424,20 @@ include '../includes/admin_header.php';
             <?php if ($total_pages > 1): ?>
                 <div class="pagination">
                     <?php if ($page > 1): ?>
-                        <a href="?page=<?php echo $page - 1; ?><?php echo $status_filter ? '&status=' . $status_filter : ''; ?><?php echo $method_filter ? '&method=' . $method_filter : ''; ?><?php echo $search ? '&search=' . $search : ''; ?>" class="page-link">
+                        <a href="?page=<?php echo $page - 1; ?><?php echo $status_filter ? '&status=' . urlencode($status_filter) : ''; ?><?php echo $method_filter ? '&method=' . urlencode($method_filter) : ''; ?><?php echo $search ? '&search=' . urlencode($search) : ''; ?>" class="page-link">
                             <i class="bi bi-chevron-left"></i> Previous
                         </a>
                     <?php endif; ?>
                     
                     <?php for ($i = max(1, $page - 2); $i <= min($total_pages, $page + 2); $i++): ?>
-                        <a href="?page=<?php echo $i; ?><?php echo $status_filter ? '&status=' . $status_filter : ''; ?><?php echo $method_filter ? '&method=' . $method_filter : ''; ?><?php echo $search ? '&search=' . $search : ''; ?>" 
+                        <a href="?page=<?php echo $i; ?><?php echo $status_filter ? '&status=' . urlencode($status_filter) : ''; ?><?php echo $method_filter ? '&method=' . urlencode($method_filter) : ''; ?><?php echo $search ? '&search=' . urlencode($search) : ''; ?>" 
                            class="page-link <?php echo $i === $page ? 'active' : ''; ?>">
                             <?php echo $i; ?>
                         </a>
                     <?php endfor; ?>
                     
                     <?php if ($page < $total_pages): ?>
-                        <a href="?page=<?php echo $page + 1; ?><?php echo $status_filter ? '&status=' . $status_filter : ''; ?><?php echo $method_filter ? '&method=' . $method_filter : ''; ?><?php echo $search ? '&search=' . $search : ''; ?>" class="page-link">
+                        <a href="?page=<?php echo $page + 1; ?><?php echo $status_filter ? '&status=' . urlencode($status_filter) : ''; ?><?php echo $method_filter ? '&method=' . urlencode($method_filter) : ''; ?><?php echo $search ? '&search=' . urlencode($search) : ''; ?>" class="page-link">
                             Next <i class="bi bi-chevron-right"></i>
                         </a>
                     <?php endif; ?>
@@ -405,7 +484,7 @@ include '../includes/admin_header.php';
             <button class="modal-close" onclick="closeViewModal()">&times;</button>
         </div>
         <div class="modal-body" id="payment-details-content">
-            <!-- Content loaded via AJAX -->
+            <!-- Content loaded via JavaScript -->
         </div>
     </div>
 </div>
@@ -428,10 +507,42 @@ function closeModal() {
     document.getElementById('updateModal').style.display = 'none';
 }
 
-function viewPayment(paymentId) {
+function viewPayment(id, customer, book, amount, method, date, status) {
     document.getElementById('viewModal').style.display = 'flex';
-    // In a real application, load payment details via AJAX
-    document.getElementById('payment-details-content').innerHTML = '<p style="text-align:center; padding:2rem;">Loading payment details...</p>';
+    document.getElementById('payment-details-content').innerHTML = `
+        <div style="padding: 1.5rem;">
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem;">
+                <div>
+                    <p style="color: #6b7280; margin-bottom: 0.5rem; font-size: 0.875rem;">Payment ID</p>
+                    <p style="font-weight: 600; font-size: 1.125rem;">#${id}</p>
+                </div>
+                <div>
+                    <p style="color: #6b7280; margin-bottom: 0.5rem; font-size: 0.875rem;">Status</p>
+                    <p style="font-weight: 600; font-size: 1.125rem;">${status}</p>
+                </div>
+                <div>
+                    <p style="color: #6b7280; margin-bottom: 0.5rem; font-size: 0.875rem;">Customer</p>
+                    <p style="font-weight: 600;">${customer}</p>
+                </div>
+                <div>
+                    <p style="color: #6b7280; margin-bottom: 0.5rem; font-size: 0.875rem;">Amount</p>
+                    <p style="font-weight: 600; font-size: 1.25rem; color: #059669;">$${parseFloat(amount).toFixed(2)}</p>
+                </div>
+                <div>
+                    <p style="color: #6b7280; margin-bottom: 0.5rem; font-size: 0.875rem;">Book Title</p>
+                    <p style="font-weight: 600;">${book}</p>
+                </div>
+                <div>
+                    <p style="color: #6b7280; margin-bottom: 0.5rem; font-size: 0.875rem;">Payment Method</p>
+                    <p style="font-weight: 600;">${method}</p>
+                </div>
+                <div style="grid-column: span 2;">
+                    <p style="color: #6b7280; margin-bottom: 0.5rem; font-size: 0.875rem;">Payment Date</p>
+                    <p style="font-weight: 600;">${date}</p>
+                </div>
+            </div>
+        </div>
+    `;
 }
 
 function closeViewModal() {
@@ -504,7 +615,6 @@ new Chart(ctx, {
 </script>
 
 <?php
-
 mysqli_close($conn);
 include '../includes/admin_footer.php';
 ?>

@@ -11,28 +11,32 @@ require_once '../config/db.php';
 
 // Handle Add User
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_user'])) {
-    $full_name = mysqli_real_escape_string($conn, $_POST['full_name']);
-    $email = mysqli_real_escape_string($conn, $_POST['email']);
+    $full_name = $_POST['full_name'];
+    $email = $_POST['email'];
     $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
-    $phone = mysqli_real_escape_string($conn, $_POST['phone']);
-    $address = mysqli_real_escape_string($conn, $_POST['address']);
+    $phone = $_POST['phone'];
+    $address = $_POST['address'];
     
-    // Check if email already exists
-    $check_email = "SELECT user_id FROM users WHERE email = '$email'";
-    $check_result = mysqli_query($conn, $check_email);
+    // Check if email already exists using prepared statement
+    $check_stmt = $conn->prepare("SELECT user_id FROM users WHERE email = ?");
+    $check_stmt->bind_param("s", $email);
+    $check_stmt->execute();
+    $check_result = $check_stmt->get_result();
     
-    if (mysqli_num_rows($check_result) > 0) {
+    if ($check_result->num_rows > 0) {
         $_SESSION['error_msg'] = "Email already exists!";
     } else {
-        $query = "INSERT INTO users (full_name, email, password, phone, address, registered_at) 
-                  VALUES ('$full_name', '$email', '$password', '$phone', '$address', NOW())";
+        $stmt = $conn->prepare("INSERT INTO users (full_name, email, password, phone, address, registered_at) VALUES (?, ?, ?, ?, ?, NOW())");
+        $stmt->bind_param("sssss", $full_name, $email, $password, $phone, $address);
         
-        if (mysqli_query($conn, $query)) {
+        if ($stmt->execute()) {
             $_SESSION['success_msg'] = "User added successfully!";
         } else {
-            $_SESSION['error_msg'] = "Error: " . mysqli_error($conn);
+            $_SESSION['error_msg'] = "Error: " . $stmt->error;
         }
+        $stmt->close();
     }
+    $check_stmt->close();
     header("Location: manage_users.php");
     exit();
 }
@@ -40,38 +44,37 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_user'])) {
 // Handle Update User
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_user'])) {
     $user_id = intval($_POST['user_id']);
-    $full_name = mysqli_real_escape_string($conn, $_POST['full_name']);
-    $email = mysqli_real_escape_string($conn, $_POST['email']);
-    $phone = mysqli_real_escape_string($conn, $_POST['phone']);
-    $address = mysqli_real_escape_string($conn, $_POST['address']);
+    $full_name = $_POST['full_name'];
+    $email = $_POST['email'];
+    $phone = $_POST['phone'];
+    $address = $_POST['address'];
     
     // Check if email already exists for other users
-    $check_email = "SELECT user_id FROM users WHERE email = '$email' AND user_id != $user_id";
-    $check_result = mysqli_query($conn, $check_email);
+    $check_stmt = $conn->prepare("SELECT user_id FROM users WHERE email = ? AND user_id != ?");
+    $check_stmt->bind_param("si", $email, $user_id);
+    $check_stmt->execute();
+    $check_result = $check_stmt->get_result();
     
-    if (mysqli_num_rows($check_result) > 0) {
+    if ($check_result->num_rows > 0) {
         $_SESSION['error_msg'] = "Email already exists!";
     } else {
-        $password_update = "";
         if (!empty($_POST['password'])) {
             $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
-            $password_update = ", password = '$password'";
+            $stmt = $conn->prepare("UPDATE users SET full_name = ?, email = ?, phone = ?, address = ?, password = ? WHERE user_id = ?");
+            $stmt->bind_param("sssssi", $full_name, $email, $phone, $address, $password, $user_id);
+        } else {
+            $stmt = $conn->prepare("UPDATE users SET full_name = ?, email = ?, phone = ?, address = ? WHERE user_id = ?");
+            $stmt->bind_param("ssssi", $full_name, $email, $phone, $address, $user_id);
         }
         
-        $query = "UPDATE users SET 
-                  full_name = '$full_name', 
-                  email = '$email', 
-                  phone = '$phone', 
-                  address = '$address'
-                  $password_update
-                  WHERE user_id = $user_id";
-        
-        if (mysqli_query($conn, $query)) {
+        if ($stmt->execute()) {
             $_SESSION['success_msg'] = "User updated successfully!";
         } else {
-            $_SESSION['error_msg'] = "Error: " . mysqli_error($conn);
+            $_SESSION['error_msg'] = "Error: " . $stmt->error;
         }
+        $stmt->close();
     }
+    $check_stmt->close();
     header("Location: manage_users.php");
     exit();
 }
@@ -80,70 +83,83 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_user'])) {
 if (isset($_GET['delete'])) {
     $user_id = intval($_GET['delete']);
     
-    // Delete user's orders first (if cascade is not set)
-    $delete_orders = "DELETE FROM orders WHERE user_id = $user_id";
-    mysqli_query($conn, $delete_orders);
+    // Use prepared statements for deletion
+    $delete_orders = $conn->prepare("DELETE FROM orders WHERE user_id = ?");
+    $delete_orders->bind_param("i", $user_id);
+    $delete_orders->execute();
+    $delete_orders->close();
     
-    // Delete user's submissions
-    $delete_submissions = "DELETE FROM submissions WHERE user_id = $user_id";
-    mysqli_query($conn, $delete_submissions);
+    $delete_submissions = $conn->prepare("DELETE FROM submissions WHERE user_id = ?");
+    $delete_submissions->bind_param("i", $user_id);
+    $delete_submissions->execute();
+    $delete_submissions->close();
     
-    // Delete user
-    $delete_user = "DELETE FROM users WHERE user_id = $user_id";
+    $delete_user = $conn->prepare("DELETE FROM users WHERE user_id = ?");
+    $delete_user->bind_param("i", $user_id);
     
-    if (mysqli_query($conn, $delete_user)) {
+    if ($delete_user->execute()) {
         $_SESSION['success_msg'] = "User deleted successfully!";
     } else {
-        $_SESSION['error_msg'] = "Error deleting user: " . mysqli_error($conn);
+        $_SESSION['error_msg'] = "Error deleting user: " . $delete_user->error;
     }
+    $delete_user->close();
     header("Location: manage_users.php");
     exit();
 }
 
-// Filters
-$search = isset($_GET['search']) ? mysqli_real_escape_string($conn, $_GET['search']) : '';
-$date_from = isset($_GET['date_from']) ? mysqli_real_escape_string($conn, $_GET['date_from']) : '';
-$date_to = isset($_GET['date_to']) ? mysqli_real_escape_string($conn, $_GET['date_to']) : '';
-$sort_by = isset($_GET['sort_by']) ? mysqli_real_escape_string($conn, $_GET['sort_by']) : 'registered_at';
-$sort_order = isset($_GET['sort_order']) ? mysqli_real_escape_string($conn, $_GET['sort_order']) : 'DESC';
+// Get and sanitize filters
+$search = isset($_GET['search']) ? trim($_GET['search']) : '';
+$date_from = isset($_GET['date_from']) ? $_GET['date_from'] : '';
+$date_to = isset($_GET['date_to']) ? $_GET['date_to'] : '';
+$sort_by = isset($_GET['sort_by']) ? $_GET['sort_by'] : 'registered_at';
+$sort_order = isset($_GET['sort_order']) ? $_GET['sort_order'] : 'DESC';
+
+// Validate sort column
+$allowed_sort = ['full_name', 'email', 'registered_at'];
+if (!in_array($sort_by, $allowed_sort)) {
+    $sort_by = 'registered_at';
+}
+
+// Validate sort order
+if (!in_array($sort_order, ['ASC', 'DESC'])) {
+    $sort_order = 'DESC';
+}
 
 // Pagination
 $limit = 20;
-$page = isset($_GET['page']) ? intval($_GET['page']) : 1;
+$page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
 $offset = ($page - 1) * $limit;
 
-// Build query
+// Build WHERE clause and parameters
 $where_conditions = ["1=1"];
-
-// REPLACE the entire query building section
 $params = [];
 $types = "";
 
-if ($search) {
+if ($search !== '') {
     $search_param = "%$search%";
-    $where_conditions[] = "(full_name LIKE ? OR email LIKE ? OR phone LIKE ?)";
+    $where_conditions[] = "(u.full_name LIKE ? OR u.email LIKE ? OR u.phone LIKE ?)";
     $params[] = $search_param;
     $params[] = $search_param;
     $params[] = $search_param;
     $types .= "sss";
 }
 
-if ($date_from) {
-    $where_conditions[] = "DATE(registered_at) >= ?";
+if ($date_from !== '') {
+    $where_conditions[] = "DATE(u.registered_at) >= ?";
     $params[] = $date_from;
     $types .= "s";
 }
 
-if ($date_to) {
-    $where_conditions[] = "DATE(registered_at) <= ?";
+if ($date_to !== '') {
+    $where_conditions[] = "DATE(u.registered_at) <= ?";
     $params[] = $date_to;
     $types .= "s";
 }
 
 $where_clause = implode(" AND ", $where_conditions);
 
-// Count with prepared statement
-$count_query = "SELECT COUNT(*) as total FROM users WHERE $where_clause";
+// Count total records with prepared statement
+$count_query = "SELECT COUNT(*) as total FROM users u WHERE $where_clause";
 if (!empty($params)) {
     $count_stmt = $conn->prepare($count_query);
     $count_stmt->bind_param($types, ...$params);
@@ -161,64 +177,33 @@ $total_pages = ceil($total_records / $limit);
 // Fetch users with prepared statement
 $query = "SELECT u.*, 
           COUNT(DISTINCT o.order_id) as order_count,
-          SUM(CASE WHEN o.status = 'paid' THEN o.total_amount ELSE 0 END) as total_spent
+          COALESCE(SUM(CASE WHEN o.status = 'paid' THEN o.total_amount ELSE 0 END), 0) as total_spent
           FROM users u 
           LEFT JOIN orders o ON u.user_id = o.user_id
           WHERE $where_clause 
           GROUP BY u.user_id
-          ORDER BY $sort_by $sort_order 
+          ORDER BY u.$sort_by $sort_order 
           LIMIT ? OFFSET ?";
 
+$stmt = $conn->prepare($query);
+$all_params = $params;
+$all_params[] = $limit;
+$all_params[] = $offset;
+$all_types = $types . "ii";
+
 if (!empty($params)) {
-    $stmt = $conn->prepare($query);
-    $params[] = $limit;
-    $params[] = $offset;
-    $types .= "ii";
-    $stmt->bind_param($types, ...$params);
-    $stmt->execute();
-    $result = $stmt->get_result();
+    $stmt->bind_param($all_types, ...$all_params);
 } else {
-    $stmt = $conn->prepare($query);
     $stmt->bind_param("ii", $limit, $offset);
-    $stmt->execute();
-    $result = $stmt->get_result();
 }
 
-$where_clause = implode(" AND ", $where_conditions);
-
-// Validate sort column
-$allowed_sort = ['full_name', 'email', 'registered_at'];
-if (!in_array($sort_by, $allowed_sort)) {
-    $sort_by = 'registered_at';
-}
-
-// Validate sort order
-if (!in_array($sort_order, ['ASC', 'DESC'])) {
-    $sort_order = 'DESC';
-}
-
-// Count total records
-$count_query = "SELECT COUNT(*) as total FROM users WHERE $where_clause";
-$count_result = mysqli_query($conn, $count_query);
-$total_records = mysqli_fetch_assoc($count_result)['total'];
-$total_pages = ceil($total_records / $limit);
-
-// Fetch users with order count
-$query = "SELECT u.*, 
-          COUNT(DISTINCT o.order_id) as order_count,
-          SUM(CASE WHEN o.status = 'paid' THEN o.total_amount ELSE 0 END) as total_spent
-          FROM users u 
-          LEFT JOIN orders o ON u.user_id = o.user_id
-          WHERE $where_clause 
-          GROUP BY u.user_id
-          ORDER BY $sort_by $sort_order 
-          LIMIT $limit OFFSET $offset";
-
-$result = mysqli_query($conn, $query);
+$stmt->execute();
+$result = $stmt->get_result();
 $users = [];
-while ($row = mysqli_fetch_assoc($result)) {
+while ($row = $result->fetch_assoc()) {
     $users[] = $row;
 }
+$stmt->close();
 
 // Get statistics
 $stats_query = "SELECT 
@@ -234,10 +219,18 @@ $stats = mysqli_fetch_assoc($stats_result);
 $edit_user = null;
 if (isset($_GET['edit'])) {
     $edit_id = intval($_GET['edit']);
-    $edit_query = "SELECT * FROM users WHERE user_id = $edit_id";
-    $edit_result = mysqli_query($conn, $edit_query);
-    $edit_user = mysqli_fetch_assoc($edit_result);
+    $edit_stmt = $conn->prepare("SELECT * FROM users WHERE user_id = ?");
+    $edit_stmt->bind_param("i", $edit_id);
+    $edit_stmt->execute();
+    $edit_result = $edit_stmt->get_result();
+    $edit_user = $edit_result->fetch_assoc();
+    $edit_stmt->close();
 }
+
+// Get success/error messages and clear them
+$success_msg = isset($_SESSION['success_msg']) ? $_SESSION['success_msg'] : '';
+$error_msg = isset($_SESSION['error_msg']) ? $_SESSION['error_msg'] : '';
+unset($_SESSION['success_msg'], $_SESSION['error_msg']);
 
 include '../includes/admin_header.php';
 ?>
@@ -266,13 +259,13 @@ include '../includes/admin_header.php';
         <div class="admin-content">
             <?php if (!empty($success_msg)): ?>
                 <div class="alert alert-success">
-                    <i class="bi bi-check-circle"></i> <?php echo $success_msg; ?>
+                    <i class="bi bi-check-circle"></i> <?php echo htmlspecialchars($success_msg); ?>
                 </div>
             <?php endif; ?>
             
             <?php if (!empty($error_msg)): ?>
                 <div class="alert alert-danger">
-                    <i class="bi bi-exclamation-triangle"></i> <?php echo $error_msg; ?>
+                    <i class="bi bi-exclamation-triangle"></i> <?php echo htmlspecialchars($error_msg); ?>
                 </div>
             <?php endif; ?>
             
@@ -577,20 +570,20 @@ include '../includes/admin_header.php';
                     <div class="pagination-wrapper">
                         <div class="pagination">
                             <?php if ($page > 1): ?>
-                                <a href="?page=<?php echo $page-1; ?>&search=<?php echo $search; ?>&date_from=<?php echo $date_from; ?>&date_to=<?php echo $date_to; ?>&sort_by=<?php echo $sort_by; ?>&sort_order=<?php echo $sort_order; ?>" class="page-link">
+                                <a href="?page=<?php echo $page-1; ?>&search=<?php echo urlencode($search); ?>&date_from=<?php echo urlencode($date_from); ?>&date_to=<?php echo urlencode($date_to); ?>&sort_by=<?php echo urlencode($sort_by); ?>&sort_order=<?php echo urlencode($sort_order); ?>" class="page-link">
                                     <i class="bi bi-chevron-left"></i> Previous
                                 </a>
                             <?php endif; ?>
                             
                             <?php for ($i = max(1, $page-2); $i <= min($total_pages, $page+2); $i++): ?>
-                                <a href="?page=<?php echo $i; ?>&search=<?php echo $search; ?>&date_from=<?php echo $date_from; ?>&date_to=<?php echo $date_to; ?>&sort_by=<?php echo $sort_by; ?>&sort_order=<?php echo $sort_order; ?>" 
+                                <a href="?page=<?php echo $i; ?>&search=<?php echo urlencode($search); ?>&date_from=<?php echo urlencode($date_from); ?>&date_to=<?php echo urlencode($date_to); ?>&sort_by=<?php echo urlencode($sort_by); ?>&sort_order=<?php echo urlencode($sort_order); ?>" 
                                    class="page-link <?php echo $i == $page ? 'active' : ''; ?>">
                                     <?php echo $i; ?>
                                 </a>
                             <?php endfor; ?>
                             
                             <?php if ($page < $total_pages): ?>
-                                <a href="?page=<?php echo $page+1; ?>&search=<?php echo $search; ?>&date_from=<?php echo $date_from; ?>&date_to=<?php echo $date_to; ?>&sort_by=<?php echo $sort_by; ?>&sort_order=<?php echo $sort_order; ?>" class="page-link">
+                                <a href="?page=<?php echo $page+1; ?>&search=<?php echo urlencode($search); ?>&date_from=<?php echo urlencode($date_from); ?>&date_to=<?php echo urlencode($date_to); ?>&sort_by=<?php echo urlencode($sort_by); ?>&sort_order=<?php echo urlencode($sort_order); ?>" class="page-link">
                                     Next <i class="bi bi-chevron-right"></i>
                                 </a>
                             <?php endif; ?>

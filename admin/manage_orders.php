@@ -56,6 +56,7 @@ $search = isset($_GET['search']) ? mysqli_real_escape_string($conn, $_GET['searc
 $date_from = isset($_GET['date_from']) ? mysqli_real_escape_string($conn, $_GET['date_from']) : '';
 $date_to = isset($_GET['date_to']) ? mysqli_real_escape_string($conn, $_GET['date_to']) : '';
 $order_type_filter = isset($_GET['order_type']) ? mysqli_real_escape_string($conn, $_GET['order_type']) : '';
+$payment_method_filter = isset($_GET['payment_method']) ? mysqli_real_escape_string($conn, $_GET['payment_method']) : '';
 
 // Pagination
 $limit = 15;
@@ -85,12 +86,17 @@ if ($order_type_filter) {
     $where_conditions[] = "o.order_type = '$order_type_filter'";
 }
 
+if ($payment_method_filter) {
+    $where_conditions[] = "p.payment_method = '$payment_method_filter'";
+}
+
 $where_clause = implode(" AND ", $where_conditions);
 
 // Count total records
 $count_query = "SELECT COUNT(*) as total FROM orders o 
                 LEFT JOIN users u ON o.user_id = u.user_id 
                 LEFT JOIN books b ON o.book_id = b.book_id 
+                LEFT JOIN payments p ON o.order_id = p.order_id
                 WHERE $where_clause";
 $count_result = mysqli_query($conn, $count_query);
 $total_records = mysqli_fetch_assoc($count_result)['total'];
@@ -135,6 +141,11 @@ if (isset($_GET['edit'])) {
     $edit_result = mysqli_query($conn, $edit_query);
     $edit_order = mysqli_fetch_assoc($edit_result);
 }
+
+// Get session messages
+$success_msg = isset($_SESSION['success_msg']) ? $_SESSION['success_msg'] : '';
+$error_msg = isset($_SESSION['error_msg']) ? $_SESSION['error_msg'] : '';
+unset($_SESSION['success_msg'], $_SESSION['error_msg']);
 
 include '../includes/admin_header.php';
 ?>
@@ -260,9 +271,9 @@ include '../includes/admin_header.php';
                                 </label>
                                 <select name="status" class="form-select" required>
                                     <option value="pending" <?php echo $edit_order['status'] == 'pending' ? 'selected' : ''; ?>>Pending</option>
+                                    <option value="confirmed" <?php echo $edit_order['status'] == 'confirmed' ? 'selected' : ''; ?>>Confirmed</option>
                                     <option value="paid" <?php echo $edit_order['status'] == 'paid' ? 'selected' : ''; ?>>Paid</option>
-                                    <option value="cancelled" <?php echo $edit_order['status'] == 'cancelled' ? 'selected' : ''; ?>>Cancelled</option>
-                                    <option value="refunded" <?php echo $edit_order['status'] == 'refunded' ? 'selected' : ''; ?>>Refunded</option>
+                                    <option value="delivered" <?php echo $edit_order['status'] == 'delivered' ? 'selected' : ''; ?>>Delivered</option>
                                 </select>
                             </div>
                             
@@ -282,7 +293,7 @@ include '../includes/admin_header.php';
             <div class="orders-filters-section">
                 <div class="filters-header">
                     <h3><i class="bi bi-funnel"></i> Filter Orders</h3>
-                    <?php if ($status_filter || $search || $date_from || $date_to || $order_type_filter): ?>
+                    <?php if ($status_filter || $search || $date_from || $date_to || $order_type_filter || $payment_method_filter): ?>
                         <a href="manage_orders.php" class="btn-clear-filters">
                             <i class="bi bi-x-circle"></i> Clear Filters
                         </a>
@@ -306,9 +317,9 @@ include '../includes/admin_header.php';
                             <select name="status" class="filter-select">
                                 <option value="">All Status</option>
                                 <option value="pending" <?php echo $status_filter == 'pending' ? 'selected' : ''; ?>>Pending</option>
+                                <option value="confirmed" <?php echo $status_filter == 'confirmed' ? 'selected' : ''; ?>>Confirmed</option>
                                 <option value="paid" <?php echo $status_filter == 'paid' ? 'selected' : ''; ?>>Paid</option>
-                                <option value="cancelled" <?php echo $status_filter == 'cancelled' ? 'selected' : ''; ?>>Cancelled</option>
-                                <option value="refunded" <?php echo $status_filter == 'refunded' ? 'selected' : ''; ?>>Refunded</option>
+                                <option value="delivered" <?php echo $status_filter == 'delivered' ? 'selected' : ''; ?>>Delivered</option>
                             </select>
                         </div>
                         
@@ -316,8 +327,21 @@ include '../includes/admin_header.php';
                             <label class="filter-label">Order Type</label>
                             <select name="order_type" class="filter-select">
                                 <option value="">All Types</option>
-                                <option value="purchase" <?php echo $order_type_filter == 'purchase' ? 'selected' : ''; ?>>Purchase</option>
-                                <option value="subscription" <?php echo $order_type_filter == 'subscription' ? 'selected' : ''; ?>>Subscription</option>
+                                <option value="pdf" <?php echo $order_type_filter == 'pdf' ? 'selected' : ''; ?>>PDF</option>
+                                <option value="cd" <?php echo $order_type_filter == 'cd' ? 'selected' : ''; ?>>CD</option>
+                                <option value="hardcopy" <?php echo $order_type_filter == 'hardcopy' ? 'selected' : ''; ?>>Hardcopy</option>
+                            </select>
+                        </div>
+                        
+                        <div class="filter-group">
+                            <label class="filter-label">Payment Method</label>
+                            <select name="payment_method" class="filter-select">
+                                <option value="">All Methods</option>
+                                <option value="credit_card" <?php echo $payment_method_filter == 'credit_card' ? 'selected' : ''; ?>>Credit Card</option>
+                                <option value="debit_card" <?php echo $payment_method_filter == 'debit_card' ? 'selected' : ''; ?>>Debit Card</option>
+                                <option value="paypal" <?php echo $payment_method_filter == 'paypal' ? 'selected' : ''; ?>>PayPal</option>
+                                <option value="bank_transfer" <?php echo $payment_method_filter == 'bank_transfer' ? 'selected' : ''; ?>>Bank Transfer</option>
+                                <option value="cod" <?php echo $payment_method_filter == 'cod' ? 'selected' : ''; ?>>Cash on Delivery</option>
                             </select>
                         </div>
                         
@@ -422,9 +446,9 @@ include '../includes/admin_header.php';
                                                 <?php 
                                                 $status_icons = [
                                                     'pending' => 'hourglass-split',
+                                                    'confirmed' => 'check-square',
                                                     'paid' => 'check-circle',
-                                                    'cancelled' => 'x-circle',
-                                                    'refunded' => 'arrow-counterclockwise'
+                                                    'delivered' => 'truck'
                                                 ];
                                                 ?>
                                                 <i class="bi bi-<?php echo $status_icons[$order['status']] ?? 'circle'; ?>"></i>
@@ -442,7 +466,17 @@ include '../includes/admin_header.php';
                                                 <button class="btn-table-action btn-view" onclick="viewOrder(<?php echo $order['order_id']; ?>)" title="View Details">
                                                     <i class="bi bi-eye"></i>
                                                 </button>
-                                                <a href="?edit=<?php echo $order['order_id']; ?>" class="btn-table-action btn-edit" title="Edit Order">
+                                                <a href="?edit=<?php echo $order['order_id']; ?><?php 
+                                                    $params = [];
+                                                    if ($status_filter) $params[] = "status=$status_filter";
+                                                    if ($search) $params[] = "search=$search";
+                                                    if ($date_from) $params[] = "date_from=$date_from";
+                                                    if ($date_to) $params[] = "date_to=$date_to";
+                                                    if ($order_type_filter) $params[] = "order_type=$order_type_filter";
+                                                    if ($payment_method_filter) $params[] = "payment_method=$payment_method_filter";
+                                                    if ($page > 1) $params[] = "page=$page";
+                                                    echo $params ? '&' . implode('&', $params) : '';
+                                                ?>" class="btn-table-action btn-edit" title="Edit Order">
                                                     <i class="bi bi-pencil"></i>
                                                 </a>
                                                 <a href="?delete=<?php echo $order['order_id']; ?>" class="btn-table-action btn-delete" 
@@ -463,20 +497,20 @@ include '../includes/admin_header.php';
                     <div class="pagination-wrapper">
                         <div class="pagination">
                             <?php if ($page > 1): ?>
-                                <a href="?page=<?php echo $page-1; ?>&status=<?php echo $status_filter; ?>&search=<?php echo $search; ?>&date_from=<?php echo $date_from; ?>&date_to=<?php echo $date_to; ?>&order_type=<?php echo $order_type_filter; ?>" class="page-link">
+                                <a href="?page=<?php echo $page-1; ?>&status=<?php echo $status_filter; ?>&search=<?php echo $search; ?>&date_from=<?php echo $date_from; ?>&date_to=<?php echo $date_to; ?>&order_type=<?php echo $order_type_filter; ?>&payment_method=<?php echo $payment_method_filter; ?>" class="page-link">
                                     <i class="bi bi-chevron-left"></i> Previous
                                 </a>
                             <?php endif; ?>
                             
                             <?php for ($i = max(1, $page-2); $i <= min($total_pages, $page+2); $i++): ?>
-                                <a href="?page=<?php echo $i; ?>&status=<?php echo $status_filter; ?>&search=<?php echo $search; ?>&date_from=<?php echo $date_from; ?>&date_to=<?php echo $date_to; ?>&order_type=<?php echo $order_type_filter; ?>" 
+                                <a href="?page=<?php echo $i; ?>&status=<?php echo $status_filter; ?>&search=<?php echo $search; ?>&date_from=<?php echo $date_from; ?>&date_to=<?php echo $date_to; ?>&order_type=<?php echo $order_type_filter; ?>&payment_method=<?php echo $payment_method_filter; ?>" 
                                    class="page-link <?php echo $i == $page ? 'active' : ''; ?>">
                                     <?php echo $i; ?>
                                 </a>
                             <?php endfor; ?>
                             
                             <?php if ($page < $total_pages): ?>
-                                <a href="?page=<?php echo $page+1; ?>&status=<?php echo $status_filter; ?>&search=<?php echo $search; ?>&date_from=<?php echo $date_from; ?>&date_to=<?php echo $date_to; ?>&order_type=<?php echo $order_type_filter; ?>" class="page-link">
+                                <a href="?page=<?php echo $page+1; ?>&status=<?php echo $status_filter; ?>&search=<?php echo $search; ?>&date_from=<?php echo $date_from; ?>&date_to=<?php echo $date_to; ?>&order_type=<?php echo $order_type_filter; ?>&payment_method=<?php echo $payment_method_filter; ?>" class="page-link">
                                     Next <i class="bi bi-chevron-right"></i>
                                 </a>
                             <?php endif; ?>
