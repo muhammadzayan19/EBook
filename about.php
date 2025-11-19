@@ -204,7 +204,7 @@ $stats['downloads'] = $result->fetch_assoc()['total'] ?? 0;
                 <div class="col-lg-3 col-md-6 mb-4">
                     <div class="team-card">
                         <div class="team-image">
-                            <img src="assets/images/team/member1.webp" alt="Team Member" >
+                            <img src="assets/images/team/zayan.webp" alt="Team Member" >
                             <div class="team-social">
                                 <a href="https://linkedin.com/in/muhammad-zayan-amir"><i class="bi bi-linkedin"></i></a>
                                 <a href="https://github.com/muhammadzayan19"><i class="bi bi-github"></i></a>
@@ -219,7 +219,7 @@ $stats['downloads'] = $result->fetch_assoc()['total'] ?? 0;
                 <div class="col-lg-3 col-md-6 mb-4">
                     <div class="team-card">
                         <div class="team-image">
-                            <img src="assets/images/team/member2.webp" alt="Team Member">
+                            <img src="assets/images/team/aayan.webp" alt="Team Member">
                             <div class="team-social">
                                 <a href="https://www.linkedin.com/in/aayan-aness-b1a14231b/"><i class="bi bi-linkedin"></i></a>
                                 <a href="https://github.com/aayana91/"><i class="bi bi-github"></i></a>

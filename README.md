@@ -67,54 +67,78 @@ A full-stack PHP + MySQL web application that allows publishers to sell and dist
 ```text
 EBOOK/
 │
-├── config/
-│   └── db.php                # Database connection
-│
-├── includes/
-│   ├── header.php            # Navigation / layout header
-│   ├── footer.php            # Footer template
-│   └── admin_header.php      # Header for Admin Pages
-│   └── admin_footer.php      # Footer for Admin Pages
-│   └── admin_sidebar.php     # Sidebar for Admin Pages
-│
 ├── admin/
-│   ├── login.php             # Admin login page
-│   ├── index.php             # Admin dashboard
-│   ├── manage_books.php      # CRUD for books
-│   ├── manage_users.php      # View/edit users
-│   ├── manage_orders.php     # Manage orders & payments
-│   ├── manage_competitions.php # Add/edit competitions
-│   ├── winners.php           # Declare & view winners
-│   └── logout.php
-│
-├── user/
-│   ├── register.php          # User registration
-│   ├── login.php             # User login
-│   ├── profile.php           # Profile dashboard
-│   ├── books.php             # Browse all books
-│   ├── book_details.php      # Single book info
-│   ├── order.php             # Order placement
-│   ├── competition.php       # Competition landing
-│   ├── upload_essay.php      # Essay upload page
-│   ├── my_orders.php         # User Orders
-│   ├── my_submissions.php    # Essay Submissions
-│   ├── my_books.php          # User Books
-│   └── logout.php
-│
-├── uploads/
-│   ├── books/                # Uploaded PDF files
-│   └── essays/               # Uploaded user essays
-│   └── book_covers/          # Uploaded Book Covers
+│   ├── get_user_details.php         # AJAX endpoint: fetch user details
+│   ├── index.php                    # Admin dashboard
+│   ├── login.php                    # Admin login page
+│   ├── manage_books.php             # CRUD for books
+│   ├── manage_competitions.php      # Add/edit competitions
+│   ├── manage_orders.php            # Manage orders & payments
+│   ├── manage_staff.php             # Manage staff (users with admin/staff roles)
+│   ├── manage_subscription.php      # Manage subscription plans & subscribers
+│   ├── manage_users.php             # View/edit users
+│   ├── payments.php                 # View/manage payments
+│   ├── save_settings.php            # Save admin settings
+│   ├── settings.php                 # Admin settings UI
+│   ├── winners.php                  # Declare & view competition winners
+│   └── logout.php                   # Admin logout
 │
 ├── assets/
-│   ├── css/
-│   ├── js/
-│   └── images/
+│   ├── css/                         # Stylesheets
+│   ├── js/                          # JavaScript
+│   └── images/                      # Images and icons
 │
-├── db_setup.php              # Auto-creates DB & tables
-├── index.php                 # Home page
-├── about.php                 # About the publisher
-├── contact.php               # Contact information
+├── config/
+│   └── db.php                       # Database connection
+│
+├── includes/
+│   ├── admin_header.php             # Admin header
+│   ├── admin_sidebar.php            # Admin sidebar
+│   ├── admin_footer.php             # Admin footer
+│   ├── DocConverter.php             # Document conversion helper
+│   ├── header.php                   # Public site header
+│   ├── navbar.php                   # Public site navbar
+│   ├── footer.php                   # Public site footer
+│   ├── functions.php                # Reusable functions/helpers
+│   ├── handle_contact.php           # Contact form handler
+│   ├── handle_review.php            # Review submission handler
+│   ├── handle_submission.php        # Essay/submission handler
+│   └── subscription_helper.php      # Subscription related helpers
+│
+├── legal/
+│   ├── privacy.php                  # Privacy policy
+│   └── terms.php                    # Terms of service
+│
+├── uploads/
+│   ├── book_covers/                 # Uploaded book covers
+│   ├── books/                       # Uploaded eBook files (PDF/EPUB)
+│   ├── essays/                      # Uploaded user essays
+│   └── submissions/                 # Generic uploaded submissions
+│
+├── user/
+│   ├── book_details.php             # Single book info
+│   ├── books.php                    # Browse all books
+│   ├── competition.php              # Competition landing page
+│   ├── login.php                    # User login
+│   ├── manage_subscription.php      # User subscription management
+│   ├── my_books.php                 # User's purchased books
+│   ├── my_orders.php                # User orders
+│   ├── my_submissions.php           # User essay submissions
+│   ├── order.php                    # Place an order
+│   ├── payment_process.php          # Payment processing
+│   ├── profile.php                  # User profile dashboard
+│   ├── register.php                 # User registration
+│   ├── subscription_process.php     # Subscription payment/processing
+│   ├── subscription.php             # Subscription page
+│   ├── update_payment.php           # Update payment details
+│   ├── upload_essay.php             # Essay upload page
+│   ├── writeessay.php               # Essay writing page
+│   └── logout.php                   # User logout
+│
+├── about.php                        # About the publisher
+├── contact.php                      # Contact information
+├── db_setup.php                     # Script to create DB & tables
+├── index.php                        # Home page
 └── README.md
 ```
 

@@ -1,0 +1,14 @@
+User-agent: *
+# Disallow admin, config and internal include directories
+Disallow: /admin/
+Disallow: /includes/
+Disallow: /config/
+Disallow: /db_setup.php
+# Avoid indexing private user uploads (essays/submissions). Allow public book files & covers.
+Disallow: /uploads/essays/
+Disallow: /uploads/submissions/
+Allow: /uploads/book_covers/
+Allow: /uploads/books/
+
+# Location of the sitemap
+Sitemap: https://zebook.free.nf/sitemap.xml

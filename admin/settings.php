@@ -541,6 +541,7 @@ include '../includes/admin_header.php';
 </div>
 
 <!-- AJAX JavaScript -->
+ <script src="../assets/js/password_validator.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Tab Navigation
@@ -682,6 +683,133 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     });
+
+    const securityForm = document.getElementById('security-form');
+    const newPasswordInput = securityForm.querySelector('input[name="new_password"]');
+    const confirmPasswordInput = securityForm.querySelector('input[name="confirm_password"]');
+    const securityTips = document.querySelector('.security-tips ul');
+    
+    // Create strength indicator container
+    const strengthContainer = document.createElement('div');
+    strengthContainer.id = 'password-strength-indicator';
+    newPasswordInput.parentNode.appendChild(strengthContainer);
+    
+    // Real-time password validation
+    newPasswordInput.addEventListener('input', function() {
+        const password = this.value;
+        
+        // Update visual feedback on tips
+        PasswordValidator.updateVisualFeedback(password, securityTips);
+        
+        // Display strength indicator
+        PasswordValidator.displayStrength(password, strengthContainer);
+    });
+    
+    // Confirm password matching
+    confirmPasswordInput.addEventListener('input', function() {
+        const password = newPasswordInput.value;
+        const confirmPassword = this.value;
+        
+        // Remove any existing match indicator
+        let matchIndicator = this.parentNode.querySelector('.password-match-indicator');
+        if (matchIndicator) {
+            matchIndicator.remove();
+        }
+        
+        // Only show indicator if both fields have values
+        if (password && confirmPassword) {
+            matchIndicator = document.createElement('small');
+            matchIndicator.className = 'password-match-indicator';
+            matchIndicator.style.display = 'block';
+            matchIndicator.style.marginTop = '0.5rem';
+            matchIndicator.style.fontWeight = '600';
+            
+            if (password === confirmPassword) {
+                matchIndicator.style.color = '#10b981';
+                matchIndicator.innerHTML = '<i class="bi bi-check-circle-fill"></i> Passwords match';
+            } else {
+                matchIndicator.style.color = '#ef4444';
+                matchIndicator.innerHTML = '<i class="bi bi-x-circle-fill"></i> Passwords do not match';
+            }
+            
+            this.parentNode.appendChild(matchIndicator);
+        }
+    });
+    
+    // Update the security form submission to include validation
+    securityForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const currentPassword = this.querySelector('input[name="current_password"]').value;
+        const newPassword = newPasswordInput.value;
+        const confirmPassword = confirmPasswordInput.value;
+        
+        // Validate new password
+        const validation = PasswordValidator.validate(newPassword);
+        
+        if (!validation.isValid) {
+            showAlert('Password does not meet requirements:<br>' + validation.errors.join('<br>'), 'danger');
+            return;
+        }
+        
+        // Check if passwords match
+        if (newPassword !== confirmPassword) {
+            showAlert('New passwords do not match!', 'danger');
+            return;
+        }
+        
+        const submitBtn = this.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        
+        // Disable button and show loading
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Changing Password...';
+        
+        // Get form data
+        const formData = new FormData(this);
+        
+        // Send AJAX request
+        fetch('save_settings.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showAlert(data.message, 'success');
+                
+                // Clear the form
+                this.reset();
+                
+                // Reset strength indicator and tips
+                strengthContainer.innerHTML = '';
+                const tipItems = securityTips.querySelectorAll('li');
+                tipItems.forEach(item => {
+                    item.style.color = '';
+                    item.style.fontWeight = '';
+                    const checkIcon = item.querySelector('i');
+                    checkIcon.className = 'bi bi-check-circle';
+                });
+                
+                // Remove match indicator
+                const matchIndicator = confirmPasswordInput.parentNode.querySelector('.password-match-indicator');
+                if (matchIndicator) {
+                    matchIndicator.remove();
+                }
+            } else {
+                showAlert(data.message, 'danger');
+            }
+        })
+        .catch(error => {
+            showAlert('An error occurred. Please try again.', 'danger');
+            console.error('Error:', error);
+        })
+        .finally(() => {
+            // Re-enable button
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+        });
+    });
 });
 </script>
 
@@ -736,6 +864,36 @@ document.addEventListener('DOMContentLoaded', function() {
 button:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+}
+.security-tips ul li {
+    transition: all 0.3s ease;
+}
+
+.security-tips ul li i {
+    transition: all 0.3s ease;
+}
+
+#password-strength-indicator {
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.password-match-indicator {
+    animation: fadeIn 0.3s ease;
+}
+
+.password-match-indicator i {
+    margin-right: 0.25rem;
 }
 </style>
 
